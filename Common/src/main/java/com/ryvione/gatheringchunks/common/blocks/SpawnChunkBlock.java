@@ -76,12 +76,14 @@ public class SpawnChunkBlock extends Block {
         }
 
         boolean ownChunkEmpty = SpawnChunkHelper.isEmptyChunk(serverLevel, ownChunk);
+        boolean ownChunkDeletedButMarked = false;
 
         if (serverLevel.getChunkSource().getGenerator() instanceof SkyChunkGenerator generator) {
-            if (ownChunkEmpty && generator.isChunkSpawned(ownChunk.toLong())) {
+            if (ownChunkEmpty && chunkSpawnController.isChunkSpawned(serverLevel, ownChunk)) {
                 ownChunkEmpty = false;
+                ownChunkDeletedButMarked = true;
             } else if (!ownChunkEmpty && generator.getGenerationType() == SkyChunkGenerator.EmptyGenerationType.Sealed
-                    && !generator.isChunkSpawned(ownChunk.toLong())) {
+                    && !chunkSpawnController.isChunkSpawned(serverLevel, ownChunk)) {
                 ownChunkEmpty = true;
             }
         }
@@ -116,10 +118,10 @@ public class SpawnChunkBlock extends Block {
                 
                 boolean targetEmpty = SpawnChunkHelper.isEmptyChunk(level, targetChunkPos);
                 if (serverLevel.getChunkSource().getGenerator() instanceof SkyChunkGenerator generator) {
-                    if (targetEmpty && generator.isChunkSpawned(targetChunkPos.toLong())) {
+                    if (targetEmpty && chunkSpawnController.isChunkSpawned(serverLevel, targetChunkPos)) {
                         targetEmpty = false;
                     } else if (!targetEmpty && generator.getGenerationType() == SkyChunkGenerator.EmptyGenerationType.Sealed
-                            && !generator.isChunkSpawned(targetChunkPos.toLong())) {
+                            && !chunkSpawnController.isChunkSpawned(serverLevel, targetChunkPos)) {
                         targetEmpty = true;
                     }
                 }
@@ -144,6 +146,12 @@ public class SpawnChunkBlock extends Block {
                     return InteractionResult.SUCCESS;
                 }
             }
+        }
+
+        if (ownChunkDeletedButMarked) {
+            serverPlayer.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
+                    "gatheringchunks.message.deleted_chunk_needs_mender"));
+            return InteractionResult.CONSUME;
         }
 
         if (!ownChunkEmpty) {
@@ -180,8 +188,8 @@ public class SpawnChunkBlock extends Block {
             }
         }
 
-        serverPlayer.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                "§c[ChunkByChunk] §eNo empty adjacent chunks to expand into. All neighboring chunks are already generated."));
+        serverPlayer.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
+                "gatheringchunks.message.no_empty_adjacent_chunks"));
         return InteractionResult.CONSUME;
     }
 

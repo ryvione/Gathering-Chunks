@@ -131,5 +131,12 @@
   "commands.gatheringchunks.spawnchunk.nonemptychunk": "Cowardly refusing to spawn into existing chunk",
   "commands.gatheringchunks.spawnchunk.invalidtheme": "Invalid biome theme",
   "item.gatheringchunks.starter_book": "Starter's Guide",
-  "item.gatheringchunks.starter_book.tooltip": "Click to read the basics of Gathering Chunks."
+  "item.gatheringchunks.starter_book.tooltip": "Click to read the basics of Gathering Chunks.",
+  "gatheringchunks.message.chunk_limit_reached": "§c[Gathering Chunks] §7Chunk limit reached for this dimension (%s/%s).",
+  "gatheringchunks.message.invalid_level_or_generator": "§c[Gathering Chunks] §7This chunk spawner cannot be used in this dimension.",
+  "gatheringchunks.message.chunk_already_generated": "§c[Gathering Chunks] §7This chunk is already generated.",
+  "gatheringchunks.message.biome_theme_not_found": "§c[Gathering Chunks] §7Biome theme '%s' has no associated generation dimension.",
+  "gatheringchunks.message.source_level_not_found": "§c[Gathering Chunks] §7Source dimension %s not found.",
+  "gatheringchunks.message.no_empty_adjacent_chunks": "§c[Gathering Chunks] §eNo empty adjacent chunks to expand into. All neighboring chunks are already generated.",
+  "gatheringchunks.message.deleted_chunk_needs_mender": "§c[Gathering Chunks] §7This chunk was already spawned and later erased. Only the World Mender can regenerate it."
 }

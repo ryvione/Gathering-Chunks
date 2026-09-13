@@ -21,6 +21,8 @@
    "block.gatheringchunks.worldmender": "World Mender",
    "block.gatheringchunks.chunkengine": "Chunk Engine",
    "block.gatheringchunks.chunkeraser": "Chunk Eraser",
+   "block.gatheringchunks.world_fragment_ore": "世界碎片矿",
+   "block.gatheringchunks.deepslate_world_fragment_ore": "深板岩世界碎片矿",
    "item.gatheringchunks.worldfragment": "世界碎片",
    "item.gatheringchunks.worldshard": "世界段片",
    "item.gatheringchunks.worldcrystal": "世界水晶",
@@ -105,5 +107,11 @@
    "commands.gatheringchunks.spawnchunk.invalidlevel": "无效的区块生成维度",
    "commands.gatheringchunks.spawnchunk.nonemptychunk": "拒绝生成到现有的区块中",
    "commands.gatheringchunks.spawnchunk.invalidtheme": "无效的生物群落类别",
+   "gatheringchunks.message.chunk_limit_reached": "§c[Gathering Chunks] §7已达到此维度的区块上限（%s/%s）。",
+   "gatheringchunks.message.invalid_level_or_generator": "§c[Gathering Chunks] §7此区块生成器无法在该维度使用。",
+   "gatheringchunks.message.chunk_already_generated": "§c[Gathering Chunks] §7该区块已生成。",
+   "gatheringchunks.message.biome_theme_not_found": "§c[Gathering Chunks] §7生物群落类别'%s'没有关联的生成维度。",
+   "gatheringchunks.message.source_level_not_found": "§c[Gathering Chunks] §7找不到来源维度%s。",
+   "gatheringchunks.message.no_empty_adjacent_chunks": "§c[Gathering Chunks] §e没有可扩展的空区块。所有相邻区块均已生成。",
    "itemGroup.gatheringchunks.main": "收集区块"
 }

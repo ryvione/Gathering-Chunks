@@ -82,6 +82,7 @@ public class ChunkByChunkMod implements ModInitializer {
 
         Path gameDir = FabricLoader.getInstance().getGameDir();
         ConfigSystem.initCentralConfigDir(gameDir);
+        ConfigUtil.startConfigWatcher();
         ConfigUtil.loadDefaultConfig();
         LOGGER.info("[ChunkByChunkMod] Centralized config directory initialized and loaded");
 
@@ -101,15 +102,7 @@ public class ChunkByChunkMod implements ModInitializer {
 
                     applyConfig(incoming);
 
-                    ConfigSystem configSystem = new ConfigSystem();
-                    java.nio.file.Path configPath = ConfigSystem.getCentralConfigPath(GatheringChunksConstants.CONFIG_FILE);
-                    configSystem.write(configPath, ChunkByChunkConfig.get());
-
-                    java.nio.file.Path worldConfigPath = context.server()
-                            .getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT)
-                            .resolve("serverconfig")
-                            .resolve(GatheringChunksConstants.CONFIG_FILE);
-                    configSystem.write(worldConfigPath, ChunkByChunkConfig.get());
+                    ConfigUtil.saveDefaultConfig(context.server());
 
                     String syncJson = gson.toJson(ChunkByChunkConfig.get().getGatheringChunksConfig());
                     S2CSyncConfigPacket syncPacket = new S2CSyncConfigPacket(syncJson);

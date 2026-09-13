@@ -66,13 +66,11 @@ public final class ChunkCopyHelper {
                     BlockState existingState = targetLevel.getBlockState(targetBlock);
                     Block existingBlock = existingState.getBlock();
                     boolean isLavaInNether = targetLevel.dimension() == Level.NETHER && existingBlock == Blocks.LAVA;
+                    boolean isReplaceableEmptySpace = existingBlock instanceof AirBlock || existingBlock instanceof LiquidBlock
+                            || existingBlock == sealedBlock || existingBlock == Blocks.SNOW || isLavaInNether;
 
-                    if (overwrite || existingBlock instanceof AirBlock || existingBlock instanceof LiquidBlock
-                            || existingBlock == sealedBlock || existingBlock == Blocks.SNOW || isLavaInNether) {
+                    if (overwrite || isReplaceableEmptySpace) {
                         BlockState newBlock = sourceLevel.getBlockState(sourceBlock);
-                        if (!overwrite && !targetLevel.getBlockState(targetBlock).isAir()) {
-                            continue;
-                        }
                         if (overwrite && chunkPreviouslyGathered && isOreBlock(newBlock.getBlock())) {
                             boolean harvested = tracker.isPositionHarvested(sourceLevel, sourceBlock);
                             if (!harvested && !existingState.is(newBlock.getBlock())) {

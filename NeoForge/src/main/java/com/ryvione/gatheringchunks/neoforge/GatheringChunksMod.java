@@ -43,6 +43,7 @@ public class GatheringChunksMod {
         LOGGER.info("Gathering Chunks (NeoForge) initializing...");
 
         ConfigSystem.initCentralConfigDir(FMLPaths.GAMEDIR.get());
+        com.ryvione.gatheringchunks.common.util.ConfigUtil.startConfigWatcher();
         LOGGER.info("[GatheringChunksMod] Centralized config directory initialized");
 
         CHUNK_GENERATORS.register(modEventBus);

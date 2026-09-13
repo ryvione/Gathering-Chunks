@@ -31,15 +31,7 @@ public class ServerPacketHandler {
 
                 applyConfig(incoming);
 
-                ConfigSystem configSystem = new ConfigSystem();
-                java.nio.file.Path configPath = ConfigSystem.getCentralConfigPath(GatheringChunksConstants.CONFIG_FILE);
-                configSystem.write(configPath, ChunkByChunkConfig.get());
-
-                java.nio.file.Path worldConfigPath = player.getServer()
-                        .getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT)
-                        .resolve("serverconfig")
-                        .resolve(GatheringChunksConstants.CONFIG_FILE);
-                configSystem.write(worldConfigPath, ChunkByChunkConfig.get());
+                com.ryvione.gatheringchunks.common.util.ConfigUtil.saveDefaultConfig(player.getServer());
 
                 String syncJson = GSON.toJson(ChunkByChunkConfig.get().getGatheringChunksConfig());
                 S2CSyncConfigPacket syncPacket = new S2CSyncConfigPacket(syncJson);

@@ -367,7 +367,10 @@ public class GatheringChunksCommand {
                 + (visBiome.equals(genBiome) ? " §a(match)" : " §c(MISMATCH)")), false);
 
         boolean spawned = skyGen.isChunkSpawned(chunkPos.toLong());
-        source.sendSuccess(() -> Component.literal("§eGathered/spawned flag: §f" + spawned), false);
+        boolean persistedSpawned = com.ryvione.gatheringchunks.server.world.ChunkSpawnController.get(source.getServer())
+                .isChunkSpawned(visibleLevel, finalChunkPos);
+        source.sendSuccess(() -> Component.literal("§eGathered/spawned flag: §f" + spawned
+                + " §7(persisted record: " + persistedSpawned + ")"), false);
 
         if (visibleChunk != null) {
             int barrierCount = countBoundaryBarriers(visibleLevel, chunkPos);
