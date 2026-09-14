@@ -72,6 +72,15 @@ plugins {
         filesMatching(['META-INF/neoforge.mods.toml', 'pack.mcmeta']) {
             expand replaceProperties
         }
+
+        doLast {
+            if (rootProject.ext.devSnapshot) {
+                def marker = new File(destinationDir, "META-INF/${mod_id}/dev_snapshot")
+                marker.parentFile.mkdirs()
+                marker.text = "dev=true\nbuilt=${new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")}\n"
+                println "[GatheringChunks] Embedded Development Snapshot marker in ${marker}"
+            }
+        }
     }
     jar {
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE

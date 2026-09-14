@@ -62,6 +62,7 @@ public class GatheringChunksMod {
             modEventBus.addListener(ClientModEvents::onClientSetup);
             modEventBus.addListener(ClientModEvents::registerScreens);
             net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(ClientGameEvents::onClientJoin);
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(ClientGameEvents::onClientTick);
         }
     }
 
@@ -89,6 +90,7 @@ public class GatheringChunksMod {
     public static class ClientModEvents {
         public static void onClientSetup(FMLClientSetupEvent event) {
             com.ryvione.gatheringchunks.client.ClientConfigStorage.init(FMLPaths.GAMEDIR.get());
+            com.ryvione.gatheringchunks.client.DevSnapshotWarning.init(FMLPaths.GAMEDIR.get());
             LOGGER.info("[GatheringChunksMod] ClientConfigStorage initialized");
         }
 
@@ -104,6 +106,7 @@ public class GatheringChunksMod {
     }
 
     public static class ClientGameEvents {
+        private static boolean devWarningShown = false;
         public static void onClientJoin(ClientPlayerNetworkEvent.LoggingIn event) {
             String address = "singleplayer";
             try {
@@ -114,6 +117,20 @@ public class GatheringChunksMod {
             } catch (Exception ignored) {}
             com.ryvione.gatheringchunks.client.ClientConfigStorage.setCurrentServer(com.ryvione.gatheringchunks.client.ClientConfigStorage.getServerIdFromConnection(address));
             LOGGER.info("[GatheringChunksMod] Joined server, set config scope: {}", address);
+        }
+
+        public static void onClientTick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
+            if (devWarningShown) {
+                return;
+            }
+            if (!com.ryvione.gatheringchunks.client.DevSnapshotWarning.shouldShow()) {
+                return;
+            }
+            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+            if (mc.screen instanceof net.minecraft.client.gui.screens.TitleScreen) {
+                devWarningShown = true;
+                mc.setScreen(new com.ryvione.gatheringchunks.client.screens.DevSnapshotWarningScreen());
+            }
         }
     }
 }

@@ -12,6 +12,9 @@ def vPrerelease = versionProps.getProperty("prerelease", "").trim()
 def vBuild = versionProps.getProperty("build", "1").trim()
 def vHotfix = versionProps.getProperty("hotfix", "").trim()
 def vBeta = versionProps.getProperty("beta", "").trim()
+def vDevMode = versionProps.getProperty("devmode", "0").trim()
+def devSnapshot = vDevMode.equalsIgnoreCase("true") || vDevMode == "1"
+ext.devSnapshot = devSnapshot
 
 def computedVersion = "${vMajor}.${vMinor}.${vPatch}"
 if (!vBeta.isEmpty()) {
@@ -29,6 +32,7 @@ version = computedVersion
 ext.modFullVersion = computedVersion
 
 println "[GatheringChunks] Version: ${computedVersion}"
+println "[GatheringChunks] Development Snapshot: ${devSnapshot ? 'ENABLED' : 'disabled'}"
 
 subprojects {
     apply plugin: 'java'

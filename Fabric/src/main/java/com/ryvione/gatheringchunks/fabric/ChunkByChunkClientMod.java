@@ -10,6 +10,7 @@
 package com.ryvione.gatheringchunks.fabric;
 
 import com.ryvione.gatheringchunks.client.ClientConfigStorage;
+import com.ryvione.gatheringchunks.client.DevSnapshotWarning;
 import com.ryvione.gatheringchunks.client.screens.*;
 import com.ryvione.gatheringchunks.common.CommonRegistry;
 import com.ryvione.gatheringchunks.common.GatheringChunksConstants;
@@ -17,6 +18,7 @@ import com.ryvione.gatheringchunks.common.network.S2COpenConfigPacket;
 import com.ryvione.gatheringchunks.common.network.S2CSyncConfigPacket;
 import com.ryvione.gatheringchunks.common.update.UpdateChecker;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
@@ -28,11 +30,24 @@ import org.apache.logging.log4j.Logger;
 public class ChunkByChunkClientMod implements ClientModInitializer {
     public static final Logger LOGGER = LogManager.getLogger(GatheringChunksConstants.MOD_ID);
 
+    private static boolean devWarningShown = false;
+
     @Override
     public void onInitializeClient() {
         LOGGER.info("Client Initializing");
 
         ClientConfigStorage.init(FabricLoader.getInstance().getGameDir());
+        DevSnapshotWarning.init(FabricLoader.getInstance().getGameDir());
+
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (devWarningShown || !DevSnapshotWarning.shouldShow()) {
+                return;
+            }
+            if (client.screen instanceof net.minecraft.client.gui.screens.TitleScreen) {
+                devWarningShown = true;
+                client.setScreen(new DevSnapshotWarningScreen());
+            }
+        });
 
         MenuScreens.register(CommonRegistry.BEDROCK_CHEST_MENU, BedrockChestScreen::new);
         MenuScreens.register(CommonRegistry.WORLD_FORGE_MENU, WorldForgeScreen::new);
