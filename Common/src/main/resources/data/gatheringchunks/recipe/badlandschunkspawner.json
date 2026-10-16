@@ -1,26 +1,18 @@
 {
-  "type" : "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shaped",
   "pattern": [
     "sCs",
     "CXC",
     "cCc"
   ],
-  "key" : {
-    "s" : {
-      "item": "minecraft:sand"
-    },
-    "c" : {
-      "item": "minecraft:clay_ball"
-    },
-    "C" : {
-      "item": "minecraft:copper_ingot"
-    },
-    "X" : {
-      "item": "gatheringchunks:worldcore"
-    }
+  "key": {
+    "s": "minecraft:sand",
+    "c": "minecraft:clay_ball",
+    "C": "minecraft:copper_ingot",
+    "X": "gatheringchunks:worldcore"
   },
-  "result" : {
-    "id" : "gatheringchunks:badlandschunkspawner",
-    "count" : 1
+  "result": {
+    "id": "gatheringchunks:badlandschunkspawner",
+    "count": 1
   }
 }

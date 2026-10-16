@@ -1,6 +1,6 @@
 plugins {
     id 'java-library'
-    id 'net.neoforged.moddev' version '2.0.28-beta'
+    id 'net.neoforged.moddev' version '2.0.147'
 }
 
 base {
@@ -11,7 +11,7 @@ neoForge {
     version = neoforge_version
     parchment {
         minecraftVersion = minecraft_version
-        mappingsVersion = '2024.11.17'
+        mappingsVersion = '2025.12.20'
     }
 }
 

@@ -6,18 +6,10 @@
     "bCb"
   ],
   "key": {
-    "r": {
-      "item": "minecraft:red_mushroom"
-    },
-    "b": {
-      "item": "minecraft:brown_mushroom"
-    },
-    "C": {
-      "item": "minecraft:copper_ingot"
-    },
-    "X": {
-      "item": "gatheringchunks:worldcore"
-    }
+    "r": "minecraft:red_mushroom",
+    "b": "minecraft:brown_mushroom",
+    "C": "minecraft:copper_ingot",
+    "X": "gatheringchunks:worldcore"
   },
   "result": {
     "id": "gatheringchunks:mushroomchunkspawner",

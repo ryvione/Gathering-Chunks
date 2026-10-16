@@ -1,20 +1,16 @@
 {
-  "type" : "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shaped",
   "pattern": [
     "sss",
     "scs",
     "sss"
   ],
-  "key" : {
-    "s" : {
-      "tag": "minecraft:stone_crafting_materials"
-    },
-    "c" : {
-      "item": "gatheringchunks:worldcore"
-    }
+  "key": {
+    "s": "#minecraft:stone_crafting_materials",
+    "c": "gatheringchunks:worldcore"
   },
-  "result" : {
-    "id" : "gatheringchunks:worldforge",
-    "count" : 1
+  "result": {
+    "id": "gatheringchunks:worldforge",
+    "count": 1
   }
 }

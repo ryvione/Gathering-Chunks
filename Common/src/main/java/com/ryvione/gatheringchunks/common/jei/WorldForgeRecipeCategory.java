@@ -25,7 +25,7 @@ import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
@@ -53,7 +53,7 @@ public class WorldForgeRecipeCategory implements IRecipeCategory<WorldForgeRecip
         return CBCJeiPlugin.WORLD_FORGE;
     }
 
-    public ResourceLocation getUid() {
+    public Identifier getUid() {
         return getRecipeType().getUid();
     }
 
@@ -91,7 +91,7 @@ public class WorldForgeRecipeCategory implements IRecipeCategory<WorldForgeRecip
     public void setRecipe(IRecipeLayoutBuilder builder, WorldForgeRecipe recipe, IFocusGroup focuses) {
         builder.addSlot(RecipeIngredientRole.INPUT, 10, 10).setSlotName("Input").addIngredients(VanillaTypes.ITEM_STACK, recipe.getInputItems());
         builder.addSlot(RecipeIngredientRole.OUTPUT, 68, 10).setSlotName("Output").addIngredient(VanillaTypes.ITEM_STACK, recipe.getOutput());
-        builder.addInvisibleIngredients(RecipeIngredientRole.CATALYST).addItemStack(Services.PLATFORM.worldForgeBlockItem().getDefaultInstance());
+        builder.addInvisibleIngredients(RecipeIngredientRole.CRAFTING_STATION).addItemStack(Services.PLATFORM.worldForgeBlockItem().getDefaultInstance());
     }
 
     public static List<WorldForgeRecipe> getOreRecipes() {

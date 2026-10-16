@@ -1,3 +1,13 @@
+/*
+ * Original work Copyright (c) immortius
+ * Modified work Copyright (c) 2026 Ryvione
+ *
+ * This file is part of Gathering Chunks (Ryvione's Fork).
+ * Original: https://github.com/immortius/chunkbychunk
+ *
+ * Licensed under the MIT License. See LICENSE file in the project root for details.
+ */
+
 package com.ryvione.gatheringchunks.server.world.spawning;
 
 import net.minecraft.nbt.CompoundTag;
@@ -37,13 +47,13 @@ public class TerrainProfile {
     }
 
     public static TerrainProfile load(CompoundTag tag) {
-        int avgHeight = tag.getInt("avgHeight");
-        int variance = tag.getInt("variance");
-        String theme = tag.getString("theme");
-        int[] north = tag.getIntArray("north");
-        int[] south = tag.getIntArray("south");
-        int[] east = tag.getIntArray("east");
-        int[] west = tag.getIntArray("west");
+        int avgHeight = tag.getIntOr("avgHeight", 0);
+        int variance = tag.getIntOr("variance", 0);
+        String theme = tag.getStringOr("theme", "");
+        int[] north = tag.getIntArray("north").orElse(new int[0]);
+        int[] south = tag.getIntArray("south").orElse(new int[0]);
+        int[] east = tag.getIntArray("east").orElse(new int[0]);
+        int[] west = tag.getIntArray("west").orElse(new int[0]);
 
         if (north.length == 0) north = new int[16];
         if (south.length == 0) south = new int[16];
@@ -55,15 +65,15 @@ public class TerrainProfile {
         String[] eBio = loadStringArray(tag, "eBio");
         String[] wBio = loadStringArray(tag, "wBio");
 
-        long sourcePosLong = tag.contains("sourcePos") ? tag.getLong("sourcePos") : ChunkPos.INVALID_CHUNK_POS;
+        long sourcePosLong = tag.contains("sourcePos") ? tag.getLongOr("sourcePos", 0L) : ChunkPos.INVALID_CHUNK_POS;
         return new TerrainProfile(north, south, east, west, nBio, sBio, eBio, wBio, avgHeight, variance, theme, new ChunkPos(sourcePosLong));
     }
 
     private static String[] loadStringArray(CompoundTag tag, String key) {
         if (!tag.contains(key)) return new String[8];
-        ListTag list = tag.getList(key, 8);
+        ListTag list = tag.getListOrEmpty(key);
         String[] arr = new String[list.size()];
-        for (int i = 0; i < list.size(); i++) arr[i] = list.getString(i);
+        for (int i = 0; i < list.size(); i++) arr[i] = list.getStringOr(i, "");
         return arr;
     }
 

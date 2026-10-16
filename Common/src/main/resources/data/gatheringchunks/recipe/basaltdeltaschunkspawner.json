@@ -1,26 +1,18 @@
 {
-  "type" : "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shaped",
   "pattern": [
     "bCb",
     "CXC",
     "mCm"
   ],
-  "key" : {
-    "b" : {
-      "item": "minecraft:basalt"
-    },
-    "m" : {
-      "item": "minecraft:magma_block"
-    },
-    "C" : {
-      "item": "minecraft:copper_ingot"
-    },
-    "X" : {
-      "item": "gatheringchunks:worldcore"
-    }
+  "key": {
+    "b": "minecraft:basalt",
+    "m": "minecraft:magma_block",
+    "C": "minecraft:copper_ingot",
+    "X": "gatheringchunks:worldcore"
   },
-  "result" : {
-    "id" : "gatheringchunks:basaltdeltaschunkspawner",
-    "count" : 1
+  "result": {
+    "id": "gatheringchunks:basaltdeltaschunkspawner",
+    "count": 1
   }
 }

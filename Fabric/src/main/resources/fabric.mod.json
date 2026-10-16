@@ -26,13 +26,14 @@
     ],
     "modmenu": [ "com.ryvione.gatheringchunks.fabric.ModMenuApiImpl" ]
   },
+  "accessWidener": "gatheringchunks.accesswidener",
   "mixins": [
     "gatheringchunks.mixins.json"
   ],
   "depends": {
-    "fabricloader": ">=0.16.9",
+    "fabricloader": ">=0.19.3",
     "fabric-api": "*",
-    "minecraft": ">=1.21.1",
+    "minecraft": ">=1.21.11",
     "java": ">=21"
   },
   "suggests" : {

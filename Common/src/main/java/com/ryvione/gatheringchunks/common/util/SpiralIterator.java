@@ -60,11 +60,11 @@ public class SpiralIterator {
         }
     }
     public void load(CompoundTag tag) {
-        currentX = tag.getInt("X");
-        currentY = tag.getInt("Y");
-        direction = tag.getInt("Direction");
-        lineLength = tag.getInt("LineLength");
-        lineRemaining = tag.getInt("LineRemaining");
+        currentX = tag.getIntOr("X", 0);
+        currentY = tag.getIntOr("Y", 0);
+        direction = tag.getIntOr("Direction", 0);
+        lineLength = tag.getIntOr("LineLength", 0);
+        lineRemaining = tag.getIntOr("LineRemaining", 0);
     }
     public CompoundTag createTag() {
         CompoundTag tag = new CompoundTag();

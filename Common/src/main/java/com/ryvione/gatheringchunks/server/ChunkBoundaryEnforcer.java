@@ -39,14 +39,15 @@ public class ChunkBoundaryEnforcer {
         BlockPos playerPos = player.blockPosition();
         ChunkPos currentChunk = new ChunkPos(playerPos);
 
-        if (SpawnChunkHelper.isEmptyChunk(player.serverLevel(), currentChunk)) {
+        if (SpawnChunkHelper.isEmptyChunk(player.level(), currentChunk)) {
             Vec3 lastValid = lastValidPosition.get(player.getUUID());
             if (lastValid != null) {
                 player.teleportTo(lastValid.x, lastValid.y, lastValid.z);
                 player.setDeltaMovement(Vec3.ZERO);
                 player.fallDistance = 0;
             } else {
-                BlockPos respawn = player.getRespawnPosition();
+                net.minecraft.server.level.ServerPlayer.RespawnConfig respawnConfig = player.getRespawnConfig();
+                BlockPos respawn = respawnConfig != null ? respawnConfig.respawnData().pos() : null;
                 if (respawn != null) {
                     player.teleportTo(respawn.getX() + 0.5, respawn.getY(), respawn.getZ() + 0.5);
                     player.setDeltaMovement(Vec3.ZERO);

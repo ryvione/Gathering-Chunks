@@ -7,6 +7,7 @@
  *
  * Licensed under the MIT License. See LICENSE file in the project root for details.
  */
+
 package com.ryvione.gatheringchunks.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -38,9 +39,7 @@ public class UpdateNotificationOverlay {
         int textWidth = minecraft.font.width(warningComponent);
         int warningX = (screenWidth - textWidth) / 2;
 
-        RenderSystem.enableBlend();
         guiGraphics.fill(warningX - 5, warningY - 2, warningX + textWidth + 5, warningY + 10, 0x88000000);
-        guiGraphics.drawCenteredString(minecraft.font, warningComponent, screenWidth / 2, warningY, 0xFFFF55);
-        RenderSystem.disableBlend();
+        guiGraphics.drawCenteredString(minecraft.font, warningComponent, screenWidth / 2, warningY, 0xFFFFFF55);
     }
 }

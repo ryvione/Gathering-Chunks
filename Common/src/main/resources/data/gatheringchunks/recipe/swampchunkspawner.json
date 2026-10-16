@@ -1,26 +1,18 @@
 {
-  "type" : "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shaped",
   "pattern": [
     "wCw",
     "CXC",
     "dCd"
   ],
-  "key" : {
-    "w" : {
-      "item": "minecraft:water_bucket"
-    },
-    "d" : {
-      "item": "minecraft:dirt"
-    },
-    "C" : {
-      "item": "minecraft:copper_ingot"
-    },
-    "X" : {
-      "item": "gatheringchunks:worldcore"
-    }
+  "key": {
+    "w": "minecraft:water_bucket",
+    "d": "minecraft:dirt",
+    "C": "minecraft:copper_ingot",
+    "X": "gatheringchunks:worldcore"
   },
-  "result" : {
-    "id" : "gatheringchunks:swampchunkspawner",
-    "count" : 1
+  "result": {
+    "id": "gatheringchunks:swampchunkspawner",
+    "count": 1
   }
 }

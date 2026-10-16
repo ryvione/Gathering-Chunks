@@ -1,26 +1,18 @@
 {
-  "type" : "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shaped",
   "pattern": [
     "rCr",
     "CXC",
     "fCf"
   ],
-  "key" : {
-    "r" : {
-      "item": "minecraft:warped_roots"
-    },
-    "f" : {
-      "item": "minecraft:warped_fungus"
-    },
-    "C" : {
-      "item": "minecraft:copper_ingot"
-    },
-    "X" : {
-      "item": "gatheringchunks:worldcore"
-    }
+  "key": {
+    "r": "minecraft:warped_roots",
+    "f": "minecraft:warped_fungus",
+    "C": "minecraft:copper_ingot",
+    "X": "gatheringchunks:worldcore"
   },
-  "result" : {
-    "id" : "gatheringchunks:warpedforestchunkspawner",
-    "count" : 1
+  "result": {
+    "id": "gatheringchunks:warpedforestchunkspawner",
+    "count": 1
   }
 }

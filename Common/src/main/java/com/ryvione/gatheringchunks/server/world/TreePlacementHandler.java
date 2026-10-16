@@ -64,9 +64,9 @@ import java.util.Random;
             if (start.isValid()) {
                 Holder<net.minecraft.world.level.levelgen.structure.Structure> structure =
                         level.registryAccess()
-                                .registryOrThrow(Registries.STRUCTURE)
+                                .lookupOrThrow(Registries.STRUCTURE)
                                 .wrapAsHolder(start.getStructure());
-                if (level.registryAccess().registryOrThrow(Registries.STRUCTURE).getTag(StructureTags.VILLAGE)
+                if (level.registryAccess().lookupOrThrow(Registries.STRUCTURE).get(StructureTags.VILLAGE)
                         .map(tag -> tag.contains(structure)).orElse(false)) {
                     return true;
                 }
@@ -90,7 +90,7 @@ import java.util.Random;
                 BlockPos.MutableBlockPos mpos = new BlockPos.MutableBlockPos();
                 for (int x = 0; x < 16; x++) {
                     for (int z = 0; z < 16; z++) {
-                        for (int y = level.getMinBuildHeight(); y < level.getMaxBuildHeight(); y++) {
+                        for (int y = level.getMinY(); y < level.getMaxY() + 1; y++) {
                             mpos.set(chunk.getPos().getMinBlockX() + x, y, chunk.getPos().getMinBlockZ() + z);
                             if (level.getBlockState(mpos).is(BlockTags.LOGS)) {
                                 totalLogs++;
@@ -111,7 +111,7 @@ import java.util.Random;
 
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
-                for (int y = level.getMinBuildHeight(); y < level.getMaxBuildHeight(); y++) {
+                for (int y = level.getMinY(); y < level.getMaxY() + 1; y++) {
                     pos.set(chunk.getPos().getMinBlockX() + x, y, chunk.getPos().getMinBlockZ() + z);
                     BlockState state = level.getBlockState(pos);
 
@@ -164,7 +164,7 @@ import java.util.Random;
 
         for (int x = 2; x < 14; x++) {
             for (int z = 2; z < 14; z++) {
-                for (int y = level.getMaxBuildHeight() - 1; y >= level.getMinBuildHeight(); y--) {
+                for (int y = level.getMaxY(); y >= level.getMinY(); y--) {
                     pos.set(chunk.getPos().getMinBlockX() + x, y, chunk.getPos().getMinBlockZ() + z);
                     BlockState state = level.getBlockState(pos);
 
@@ -207,183 +207,29 @@ import java.util.Random;
     }
 
     private static void placeTreeAt(ServerLevel level, BlockPos pos, Random random, Holder<Biome> biomeHolder) {
+        net.minecraft.world.level.block.Block sapling;
         if (biomeHolder.is(Biomes.SAVANNA) || biomeHolder.is(Biomes.SAVANNA_PLATEAU) ||
                 biomeHolder.is(Biomes.WINDSWEPT_SAVANNA)) {
-            placeAcaciaTree(level, pos, random);
+            sapling = Blocks.ACACIA_SAPLING;
         } else if (biomeHolder.is(Biomes.JUNGLE) || biomeHolder.is(Biomes.BAMBOO_JUNGLE) ||
                 biomeHolder.is(Biomes.SPARSE_JUNGLE)) {
-            placeJungleTree(level, pos, random);
+            sapling = Blocks.JUNGLE_SAPLING;
         } else if (biomeHolder.is(Biomes.TAIGA) || biomeHolder.is(Biomes.SNOWY_TAIGA) ||
                 biomeHolder.is(Biomes.OLD_GROWTH_PINE_TAIGA) || biomeHolder.is(Biomes.OLD_GROWTH_SPRUCE_TAIGA)) {
-            placeSpruceTree(level, pos, random);
+            sapling = Blocks.SPRUCE_SAPLING;
         } else if (biomeHolder.is(Biomes.BIRCH_FOREST) || biomeHolder.is(Biomes.OLD_GROWTH_BIRCH_FOREST)) {
-            placeBirchTree(level, pos, random);
+            sapling = Blocks.BIRCH_SAPLING;
         } else if (biomeHolder.is(Biomes.DARK_FOREST)) {
-            if (random.nextBoolean()) {
-                placeDarkOakTree(level, pos, random);
-            } else {
-                placeOakTree(level, pos, random);
-            }
-        } else if (biomeHolder.is(Biomes.SWAMP) || biomeHolder.is(Biomes.MANGROVE_SWAMP)) {
-            placeOakTree(level, pos, random);
-        } else if (biomeHolder.is(Biomes.DESERT) || biomeHolder.is(Biomes.BADLANDS) ||
-                biomeHolder.is(Biomes.WOODED_BADLANDS) || biomeHolder.is(Biomes.ERODED_BADLANDS)) {
-            placeOakTree(level, pos, random);
+            sapling = random.nextBoolean() ? Blocks.DARK_OAK_SAPLING : Blocks.OAK_SAPLING;
         } else {
-            placeOakTree(level, pos, random);
-        }
-    }
-
-    private static void placeOakTree(ServerLevel level, BlockPos pos, Random random) {
-        int height = 4 + random.nextInt(3);
-
-        for (int i = 0; i < height; i++) {
-            level.setBlock(pos.above(i), Blocks.OAK_LOG.defaultBlockState(), 3);
+            sapling = Blocks.OAK_SAPLING;
         }
 
-        for (int y = height - 2; y <= height + 1; y++) {
-            int radius = (y == height + 1 || y == height - 2) ? 1 : 2;
-            for (int x = -radius; x <= radius; x++) {
-                for (int z = -radius; z <= radius; z++) {
-                    if (x == 0 && z == 0 && y < height + 1) continue;
-                    if (Math.abs(x) == 2 && Math.abs(z) == 2) continue;
-
-                    BlockPos leafPos = pos.offset(x, y, z);
-                    if (level.getBlockState(leafPos).isAir()) {
-                        level.setBlock(leafPos, Blocks.OAK_LEAVES.defaultBlockState(), 3);
-                    }
-                }
-            }
-        }
-    }
-
-    private static void placeBirchTree(ServerLevel level, BlockPos pos, Random random) {
-        int height = 5 + random.nextInt(3);
-
-        for (int i = 0; i < height; i++) {
-            level.setBlock(pos.above(i), Blocks.BIRCH_LOG.defaultBlockState(), 3);
-        }
-
-        for (int y = height - 2; y <= height + 1; y++) {
-            int radius = (y == height + 1) ? 1 : 2;
-            for (int x = -radius; x <= radius; x++) {
-                for (int z = -radius; z <= radius; z++) {
-                    if (x == 0 && z == 0 && y < height + 1) continue;
-                    if (Math.abs(x) == 2 && Math.abs(z) == 2) continue;
-
-                    BlockPos leafPos = pos.offset(x, y, z);
-                    if (level.getBlockState(leafPos).isAir()) {
-                        level.setBlock(leafPos, Blocks.BIRCH_LEAVES.defaultBlockState(), 3);
-                    }
-                }
-            }
-        }
-    }
-
-    private static void placeSpruceTree(ServerLevel level, BlockPos pos, Random random) {
-        int height = 6 + random.nextInt(4);
-
-        for (int i = 0; i < height; i++) {
-            level.setBlock(pos.above(i), Blocks.SPRUCE_LOG.defaultBlockState(), 3);
-        }
-
-        for (int y = 1; y < height; y++) {
-            int radius = Math.max(1, height - y - 1);
-            radius = Math.min(radius, 2);
-
-            for (int x = -radius; x <= radius; x++) {
-                for (int z = -radius; z <= radius; z++) {
-                    if (x == 0 && z == 0) continue;
-
-                    BlockPos leafPos = pos.offset(x, y, z);
-                    if (level.getBlockState(leafPos).isAir()) {
-                        level.setBlock(leafPos, Blocks.SPRUCE_LEAVES.defaultBlockState(), 3);
-                    }
-                }
-            }
-        }
-
-        level.setBlock(pos.above(height), Blocks.SPRUCE_LEAVES.defaultBlockState(), 3);
-    }
-
-    private static void placeAcaciaTree(ServerLevel level, BlockPos pos, Random random) {
-        int height = 5 + random.nextInt(3);
-
-        for (int i = 0; i < height; i++) {
-            if (i < 3) {
-                level.setBlock(pos.above(i), Blocks.ACACIA_LOG.defaultBlockState(), 3);
-            } else {
-                int offset = i - 2;
-                level.setBlock(pos.offset(offset, i, 0), Blocks.ACACIA_LOG.defaultBlockState(), 3);
-            }
-        }
-
-        BlockPos canopyCenter = pos.offset(height - 2, height, 0);
-        for (int x = -2; x <= 2; x++) {
-            for (int z = -2; z <= 2; z++) {
-                for (int y = 0; y <= 1; y++) {
-                    if (Math.abs(x) == 2 && Math.abs(z) == 2) continue;
-                    BlockPos leafPos = canopyCenter.offset(x, y, z);
-                    if (level.getBlockState(leafPos).isAir()) {
-                        level.setBlock(leafPos, Blocks.ACACIA_LEAVES.defaultBlockState(), 3);
-                    }
-                }
-            }
-        }
-    }
-
-    private static void placeJungleTree(ServerLevel level, BlockPos pos, Random random) {
-        int height = 7 + random.nextInt(5);
-
-        for (int i = 0; i < height; i++) {
-            level.setBlock(pos.above(i), Blocks.JUNGLE_LOG.defaultBlockState(), 3);
-        }
-
-        if (random.nextBoolean()) {
-            level.setBlock(pos.offset(1, 2, 0), Blocks.VINE.defaultBlockState(), 3);
-        }
-        if (random.nextBoolean()) {
-            level.setBlock(pos.offset(-1, 2, 0), Blocks.VINE.defaultBlockState(), 3);
-        }
-
-        for (int y = height - 3; y <= height + 1; y++) {
-            int radius = (y == height + 1) ? 1 : 2;
-            for (int x = -radius; x <= radius; x++) {
-                for (int z = -radius; z <= radius; z++) {
-                    if (x == 0 && z == 0 && y < height) continue;
-
-                    BlockPos leafPos = pos.offset(x, y, z);
-                    if (level.getBlockState(leafPos).isAir()) {
-                        level.setBlock(leafPos, Blocks.JUNGLE_LEAVES.defaultBlockState(), 3);
-                    }
-                }
-            }
-        }
-    }
-
-    private static void placeDarkOakTree(ServerLevel level, BlockPos pos, Random random) {
-        int height = 6 + random.nextInt(3);
-
-        for (int i = 0; i < height; i++) {
-            level.setBlock(pos.above(i), Blocks.DARK_OAK_LOG.defaultBlockState(), 3);
-            level.setBlock(pos.offset(1, i, 0), Blocks.DARK_OAK_LOG.defaultBlockState(), 3);
-            level.setBlock(pos.offset(0, i, 1), Blocks.DARK_OAK_LOG.defaultBlockState(), 3);
-            level.setBlock(pos.offset(1, i, 1), Blocks.DARK_OAK_LOG.defaultBlockState(), 3);
-        }
-
-        for (int y = height - 2; y <= height + 1; y++) {
-            int radius = 3;
-            for (int x = -radius; x <= radius; x++) {
-                for (int z = -radius; z <= radius; z++) {
-                    if ((x == 0 || x == 1) && (z == 0 || z == 1) && y < height) continue;
-                    if (Math.abs(x) == 3 && Math.abs(z) == 3) continue;
-
-                    BlockPos leafPos = pos.offset(x, y, z);
-                    if (level.getBlockState(leafPos).isAir()) {
-                        level.setBlock(leafPos, Blocks.DARK_OAK_LEAVES.defaultBlockState(), 3);
-                    }
-                }
-            }
+        net.minecraft.world.level.block.state.BlockState state = sapling.defaultBlockState();
+        level.setBlock(pos, state, net.minecraft.world.level.block.Block.UPDATE_ALL);
+        if (level.getBlockState(pos).getBlock() instanceof net.minecraft.world.level.block.SaplingBlock saplingBlock) {
+            saplingBlock.advanceTree(level, pos, level.getBlockState(pos), level.getRandom());
+            saplingBlock.advanceTree(level, pos, level.getBlockState(pos), level.getRandom());
         }
     }
 }

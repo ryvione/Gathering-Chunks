@@ -15,8 +15,10 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.animal.*;
+import net.minecraft.world.entity.animal.fish.*;
 import net.minecraft.world.entity.animal.axolotl.Axolotl;
-import net.minecraft.world.entity.GlowSquid;
+import net.minecraft.world.entity.animal.squid.GlowSquid;
+import net.minecraft.world.entity.animal.squid.Squid;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -74,7 +76,7 @@ public final class EntityTickWatchdog {
                     BlockPos pos = entity.blockPosition();
                     BlockState below = level.getBlockState(pos.below());
                     BlockState at = level.getBlockState(pos);
-                    boolean inSolid = !at.isAir() && at.isSolidRender(level, pos);
+                    boolean inSolid = !at.isAir() && at.isSolidRender();
                     boolean looping = below.is(Blocks.WATER) && at.is(Blocks.WATER);
                     if (inSolid || looping) {
                         GatheringChunksConstants.LOGGER.debug(

@@ -33,8 +33,8 @@ public class ChunkBarrierManager {
             return;
         }
 
-        int minY = level.getMinBuildHeight();
-        int maxY = level.getMaxBuildHeight();
+        int minY = level.getMinY();
+        int maxY = level.getMaxY() + 1;
 
         int minX = chunkPos.getMinBlockX();
         int maxX = chunkPos.getMaxBlockX();
@@ -63,8 +63,8 @@ public class ChunkBarrierManager {
             return;
         }
 
-        int minY = level.getMinBuildHeight();
-        int maxY = level.getMaxBuildHeight();
+        int minY = level.getMinY();
+        int maxY = level.getMaxY() + 1;
 
         int minX = chunkPos.getMinBlockX();
         int maxX = chunkPos.getMaxBlockX();
@@ -93,8 +93,8 @@ public class ChunkBarrierManager {
             return;
         }
 
-        int minY = level.getMinBuildHeight();
-        int maxY = level.getMaxBuildHeight();
+        int minY = level.getMinY();
+        int maxY = level.getMaxY() + 1;
 
         if (chunk1.x == chunk2.x) {
             int x = chunk1.getMinBlockX();
@@ -157,7 +157,7 @@ public class ChunkBarrierManager {
     }
 
     private static boolean isChunkSpawned(ServerLevel level, ChunkPos chunkPos) {
-        BlockPos bedrockCheckBlock = chunkPos.getMiddleBlockPosition(level.getMinBuildHeight());
+        BlockPos bedrockCheckBlock = chunkPos.getMiddleBlockPosition(level.getMinY());
         return Blocks.BEDROCK.equals(level.getBlockState(bedrockCheckBlock).getBlock());
     }
 }

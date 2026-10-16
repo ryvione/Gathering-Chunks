@@ -20,6 +20,8 @@ import com.ryvione.gatheringchunks.config.ChunkByChunkConfig;
 import com.ryvione.gatheringchunks.interop.Services;
 import com.ryvione.gatheringchunks.server.world.SkyChunkGenerator;
 import com.ryvione.gatheringchunks.server.world.SpawnChunkHelper;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -60,7 +62,12 @@ public class CaveScannerBlockEntity extends BaseFueledBlockEntity {
     public static final int DATA_SCANNING_X = 3;
     public static final int DATA_SCANNING_Z = 4;
     public static final int DATA_ESP_ENABLED = 5;
-    public static final int NUM_DATA_ITEMS = 6;
+    // The scanner's own block position, as two 16-bit halves each, because container data is sent as 16-bit values.
+    public static final int DATA_POS_X_LOW = 6;
+    public static final int DATA_POS_X_HIGH = 7;
+    public static final int DATA_POS_Z_LOW = 8;
+    public static final int DATA_POS_Z_HIGH = 9;
+    public static final int NUM_DATA_ITEMS = 10;
     public static final int SCAN_CENTER = 15;
     public static final int SCAN_ZOOM = 4;
     public static final int NO_MAP = -1;
@@ -92,6 +99,10 @@ public class CaveScannerBlockEntity extends BaseFueledBlockEntity {
                 case DATA_SCANNING_X -> scanIterator.getX();
                 case DATA_SCANNING_Z -> scanIterator.getY();
                 case DATA_ESP_ENABLED -> espEnabled ? 1 : 0;
+                case DATA_POS_X_LOW -> getBlockPos().getX() & 0xFFFF;
+                case DATA_POS_X_HIGH -> getBlockPos().getX() >> 16;
+                case DATA_POS_Z_LOW -> getBlockPos().getZ() & 0xFFFF;
+                case DATA_POS_Z_HIGH -> getBlockPos().getZ() >> 16;
                 default -> 0;
             };
         }
@@ -158,22 +169,22 @@ public class CaveScannerBlockEntity extends BaseFueledBlockEntity {
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider provider) {
-        super.loadAdditional(tag, provider);
-        int mapId = tag.getInt("Map");
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        int mapId = input.getIntOr("Map", 0);
         map = mapId == NO_MAP ? null : new MapId(mapId);
-        scanIterator.load(tag.getCompound("ScanIterator"));
-        scanCharge = tag.getInt("ScanCharge");
-        espEnabled = tag.getBoolean("EspEnabled");
+        scanIterator.load(input.read("ScanIterator", CompoundTag.CODEC).orElseGet(CompoundTag::new));
+        scanCharge = input.getIntOr("ScanCharge", 0);
+        espEnabled = input.getBooleanOr("EspEnabled", false);
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider provider) {
-        super.saveAdditional(tag, provider);
-        tag.putInt("Map", map != null ? map.id() : NO_MAP);
-        tag.put("ScanIterator", scanIterator.createTag());
-        tag.putInt("ScanCharge", scanCharge);
-        tag.putBoolean("EspEnabled", espEnabled);
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        output.putInt("Map", map != null ? map.id() : NO_MAP);
+        output.store("ScanIterator", CompoundTag.CODEC, scanIterator.createTag());
+        output.putInt("ScanCharge", scanCharge);
+        output.putBoolean("EspEnabled", espEnabled);
     }
 
     private boolean validTarget() {
@@ -313,7 +324,7 @@ public class CaveScannerBlockEntity extends BaseFueledBlockEntity {
         try {
             net.minecraft.world.level.biome.BiomeSource source = level.getChunkSource().getGenerator().getBiomeSource();
             net.minecraft.world.level.levelgen.RandomState rs = level.getChunkSource().randomState();
-            int minY = Math.max(level.getMinBuildHeight() >> 2, -16);
+            int minY = Math.max(level.getMinY() >> 2, -16);
             int maxY = 16 >> 2;
             boolean hasLush = false, hasDripstone = false, hasDeepDark = false;
             boolean hasFrozen = false, hasNether = false, hasCave = false;
@@ -322,7 +333,7 @@ public class CaveScannerBlockEntity extends BaseFueledBlockEntity {
                     for (int qy = minY; qy <= maxY; qy++) {
                         net.minecraft.core.Holder<net.minecraft.world.level.biome.Biome> biome =
                             source.getNoiseBiome((chunkX << 2) + qx, qy, (chunkZ << 2) + qz, rs.sampler());
-                        String path = biome.unwrapKey().map(k -> k.location().getPath()).orElse("");
+                        String path = biome.unwrapKey().map(k -> k.identifier().getPath()).orElse("");
                         if (path.contains("lush_caves")) hasLush = true;
                         else if (path.contains("dripstone")) hasDripstone = true;
                         else if (path.contains("deep_dark")) hasDeepDark = true;
@@ -347,8 +358,8 @@ public class CaveScannerBlockEntity extends BaseFueledBlockEntity {
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
         int minX = chunk.getPos().getMinBlockX();
         int minZ = chunk.getPos().getMinBlockZ();
-        int minY = chunk.getMinBuildHeight();
-        int maxY = Math.min(chunk.getMaxBuildHeight(), 64);
+        int minY = chunk.getMinY();
+        int maxY = Math.min(chunk.getMaxY() + 1, 64);
         
         for (int x = 0; x < 16; x += 2) {
             for (int z = 0; z < 16; z += 2) {
@@ -369,7 +380,7 @@ public class CaveScannerBlockEntity extends BaseFueledBlockEntity {
         try {
             net.minecraft.world.level.biome.BiomeSource source = level.getChunkSource().getGenerator().getBiomeSource();
             net.minecraft.world.level.levelgen.RandomState rs = level.getChunkSource().randomState();
-            int minY = level.getMinBuildHeight() >> 2;
+            int minY = level.getMinY() >> 2;
             int maxY = 64 >> 2;
             
             for (int qx = 0; qx < 4; qx++) {
@@ -388,7 +399,7 @@ public class CaveScannerBlockEntity extends BaseFueledBlockEntity {
 
     private static boolean isCaveBiome(net.minecraft.core.Holder<net.minecraft.world.level.biome.Biome> biome) {
         return biome.unwrapKey().map(key -> {
-            String path = key.location().getPath();
+            String path = key.identifier().getPath();
             return path.contains("lush_caves") || path.contains("dripstone_caves");
         }).orElse(false);
     }
@@ -439,7 +450,7 @@ public class CaveScannerBlockEntity extends BaseFueledBlockEntity {
     public void setEspEnabled(boolean enabled) {
         this.espEnabled = enabled;
         setChanged();
-        if (level != null && !level.isClientSide) {
+        if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
     }

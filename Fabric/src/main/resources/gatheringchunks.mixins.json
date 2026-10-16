@@ -5,23 +5,19 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "gatheringchunks-fabric-refmap.json",
   "mixins": [
-    "BucketFluidAccessor",
-    "ChunkGeneratorAccessor",
-    "ChunkGeneratorStructureAccessor",
     "ChunkMapMixin",
     "DefrostedRegistry",
-    "EntityChangeDimensionMixin",
     "FluidTickMixin",
     "HolderReferenceAccessor",
     "MobSpawnVoidChunkMixin",
     "MultiNoiseBiomeSourceAccessor",
-    "NoiseBasedChunkGeneratorMixin",
     "NoiseSettingsFixMixin",
-    "OverworldBiomeBuilderAccessor",
+    "ServerLevelLazyStructureSetupMixin",
     "StructureCheckMixin"
   ],
   "client": [
-    "LevelRendererMixin",
+    "CreateWorldMoreTabMixin",
+    "CreateWorldScreenMixin",
     "PauseScreenMixin",
     "TitleScreenMixin"
   ],

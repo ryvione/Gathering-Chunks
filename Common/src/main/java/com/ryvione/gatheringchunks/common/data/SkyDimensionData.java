@@ -12,7 +12,7 @@ package com.ryvione.gatheringchunks.common.data;
 import com.ryvione.gatheringchunks.common.GatheringChunksConstants;
 import com.ryvione.gatheringchunks.server.world.SkyChunkGenerator;
 import net.minecraft.core.MappedRegistry;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.dimension.LevelStem;
 
 import java.util.ArrayList;
@@ -38,8 +38,8 @@ public class SkyDimensionData {
 
     public Map<String, List<String>> biomeThemes = new LinkedHashMap<>();
 
-    public boolean validate(ResourceLocation dataId, MappedRegistry<LevelStem> dimensions) {
-        if (!dimensions.containsKey(ResourceLocation.parse(dimensionId))) {
+    public boolean validate(Identifier dataId, MappedRegistry<LevelStem> dimensions) {
+        if (!dimensions.containsKey(Identifier.parse(dimensionId))) {
             GatheringChunksConstants.LOGGER.error("Invalid dimension '{}' for sky dimension {}", dimensionId, dataId);
             return false;
         }
@@ -49,7 +49,7 @@ public class SkyDimensionData {
             return false;
         }
         for (String dim : synchToDimensions) {
-            if (!dimensions.containsKey(ResourceLocation.parse(dim))) {
+            if (!dimensions.containsKey(Identifier.parse(dim))) {
                 GatheringChunksConstants.LOGGER.error("Invalid synch dimension '{}' for sky dimension {}", dim, dataId);
                 return false;
             }
@@ -57,11 +57,11 @@ public class SkyDimensionData {
         return true;
     }
 
-    public ResourceLocation getGenDimensionId() {
+    public Identifier getGenDimensionId() {
         if (genDimensionId == null) {
-            return ResourceLocation.parse(dimensionId + "_gen");
+            return Identifier.parse(dimensionId + "_gen");
         } else {
-            return ResourceLocation.parse(genDimensionId);
+            return Identifier.parse(genDimensionId);
         }
     }
 }

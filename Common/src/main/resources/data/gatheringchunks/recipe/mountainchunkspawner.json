@@ -1,26 +1,18 @@
 {
-  "type" : "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shaped",
   "pattern": [
     "rCd",
     "CXC",
     "dCr"
   ],
-  "key" : {
-    "r" : {
-      "tag": "minecraft:stone_crafting_materials"
-    },
-    "d" : {
-      "item": "minecraft:diamond"
-    },
-    "C" : {
-      "item": "minecraft:copper_ingot"
-    },
-    "X" : {
-      "item": "gatheringchunks:worldcore"
-    }
+  "key": {
+    "r": "#minecraft:stone_crafting_materials",
+    "d": "minecraft:diamond",
+    "C": "minecraft:copper_ingot",
+    "X": "gatheringchunks:worldcore"
   },
-  "result" : {
-    "id" : "gatheringchunks:mountainchunkspawner",
-    "count" : 1
+  "result": {
+    "id": "gatheringchunks:mountainchunkspawner",
+    "count": 1
   }
 }

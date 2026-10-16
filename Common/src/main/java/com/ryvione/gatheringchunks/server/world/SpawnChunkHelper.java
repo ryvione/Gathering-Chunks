@@ -33,6 +33,12 @@ import java.util.List;
 import java.util.Random;
 
 public final class SpawnChunkHelper {
+
+    public static void setLevelSpawn(net.minecraft.world.level.storage.ServerLevelData levelData, net.minecraft.core.BlockPos pos) {
+        net.minecraft.world.level.storage.LevelData.RespawnData current = levelData.getRespawnData();
+        levelData.setSpawn(net.minecraft.world.level.storage.LevelData.RespawnData.of(
+                current.dimension(), pos, current.yaw(), current.pitch()));
+    }
     private SpawnChunkHelper() {
     }
 
@@ -42,7 +48,7 @@ public final class SpawnChunkHelper {
             return true;
         }
 
-        int minY = level.getMinBuildHeight();
+        int minY = level.getMinY();
         BlockPos bedrockCheckBlock = chunkPos.getMiddleBlockPosition(minY);
         if (Blocks.BEDROCK.equals(chunk.getBlockState(bedrockCheckBlock).getBlock())) {
             return false;
@@ -88,7 +94,7 @@ public final class SpawnChunkHelper {
             for (int lz = 0; lz < 16; lz += 4) {
                 totalSamples++;
                 int surfaceY = chunk.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, lx, lz);
-                if (surfaceY <= level.getMinBuildHeight()) continue;
+                if (surfaceY <= level.getMinY()) continue;
 
                 BlockPos checkPos = new BlockPos(chunkPos.getMinBlockX() + lx, surfaceY, chunkPos.getMinBlockZ() + lz);
                 if (level.getBlockState(checkPos).getBlock() instanceof LiquidBlock) {
@@ -162,8 +168,8 @@ public final class SpawnChunkHelper {
         int minPos = Math.min(minDepth, maxDepth);
         int maxPos = Math.max(minDepth, maxDepth);
 
-        minPos = Math.max(minPos, targetLevel.getMinBuildHeight());
-        maxPos = Math.min(maxPos, targetLevel.getMaxBuildHeight());
+        minPos = Math.max(minPos, targetLevel.getMinY());
+        maxPos = Math.min(maxPos, targetLevel.getMaxY() + 1);
 
         if (minPos > maxPos) minPos = maxPos;
 
@@ -175,7 +181,7 @@ public final class SpawnChunkHelper {
             } else {
                 yPos = random.nextInt(maxPos - minPos + 1) + minPos;
             }
-            yPos = Math.max(targetLevel.getMinBuildHeight(), Math.min(targetLevel.getMaxBuildHeight(), yPos));
+            yPos = Math.max(targetLevel.getMinY(), Math.min(targetLevel.getMaxY() + 1, yPos));
 
             int xPos = chunkPos.getMinBlockX() + random.nextInt(16);
             int zPos = chunkPos.getMinBlockZ() + random.nextInt(16);

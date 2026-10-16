@@ -1,0 +1,5 @@
+classTweaker v1 named
+# BlockEntityType's constructor and its supplier are private in vanilla 1.21.11. NeoForge's
+# access transformers expose them; Fabric needs this file for CommonRegistry.
+accessible class net/minecraft/world/level/block/entity/BlockEntityType$BlockEntitySupplier
+accessible method net/minecraft/world/level/block/entity/BlockEntityType <init> (Lnet/minecraft/world/level/block/entity/BlockEntityType$BlockEntitySupplier;Ljava/util/Set;)V

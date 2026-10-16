@@ -13,13 +13,13 @@ package com.ryvione.gatheringchunks.mixins;
 import com.mojang.datafixers.DataFixer;
 import com.ryvione.gatheringchunks.server.world.SkyChunkGenerator;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.progress.ChunkProgressListener;
 import net.minecraft.util.thread.BlockableEventLoop;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.chunk.LightChunkGetter;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
+import net.minecraft.world.level.TicketStorage;
 import net.minecraft.world.level.entity.ChunkStatusUpdateListener;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import org.spongepowered.asm.mixin.Mixin;
@@ -47,9 +47,9 @@ public abstract class NoiseSettingsFixMixin {
             BlockableEventLoop<Runnable> mainThreadExecutor,
             LightChunkGetter lightChunk,
             ChunkGenerator chunkGenerator,
-            ChunkProgressListener progressListener,
             ChunkStatusUpdateListener chunkStatusListener,
             Supplier<net.minecraft.world.level.storage.DimensionDataStorage> dimensionDataStorageSupplier,
+            TicketStorage ticketStorage,
             int viewDistance,
             boolean simulate) {
         if (chunkGenerator instanceof SkyChunkGenerator skyGenerator

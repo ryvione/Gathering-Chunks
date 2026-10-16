@@ -25,7 +25,7 @@ public class MobLootHandler {
     private static final Random RANDOM = new Random();
 
     public static void onMobDeath(LivingEntity entity, Level level) {
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             return;
         }
 

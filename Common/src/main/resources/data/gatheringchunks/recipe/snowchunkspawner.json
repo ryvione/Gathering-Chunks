@@ -1,26 +1,18 @@
 {
-  "type" : "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shaped",
   "pattern": [
     "wCl",
     "CXC",
     "lCw"
   ],
-  "key" : {
-    "w" : {
-      "item": "minecraft:water_bucket"
-    },
-    "l" : {
-      "item": "minecraft:lapis_lazuli"
-    },
-    "C" : {
-      "item": "minecraft:copper_ingot"
-    },
-    "X" : {
-      "item": "gatheringchunks:worldcore"
-    }
+  "key": {
+    "w": "minecraft:water_bucket",
+    "l": "minecraft:lapis_lazuli",
+    "C": "minecraft:copper_ingot",
+    "X": "gatheringchunks:worldcore"
   },
-  "result" : {
-    "id" : "gatheringchunks:snowchunkspawner",
-    "count" : 1
+  "result": {
+    "id": "gatheringchunks:snowchunkspawner",
+    "count": 1
   }
 }

@@ -1,5 +1,16 @@
+/*
+ * Original work Copyright (c) immortius
+ * Modified work Copyright (c) 2026 Ryvione
+ *
+ * This file is part of Gathering Chunks (Ryvione's Fork).
+ * Original: https://github.com/immortius/chunkbychunk
+ *
+ * Licensed under the MIT License. See LICENSE file in the project root for details.
+ */
+
 package com.ryvione.gatheringchunks.fabric;
 
+import com.ryvione.gatheringchunks.server.DelayedTasks;
 import com.ryvione.gatheringchunks.common.CommonEventHandler;
 import com.ryvione.gatheringchunks.common.CommonRegistry;
 import com.ryvione.gatheringchunks.common.GatheringChunksConstants;
@@ -33,9 +44,10 @@ import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.BlockPos;
+import net.minecraft.commands.Commands;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.PackType;
@@ -65,13 +77,13 @@ public class ChunkByChunkMod implements ModInitializer {
                 net.fabricmc.fabric.api.biome.v1.BiomeSelectors.foundInOverworld(),
                 net.minecraft.world.level.levelgen.GenerationStep.Decoration.UNDERGROUND_ORES,
                 net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.PLACED_FEATURE,
-                        ResourceLocation.fromNamespaceAndPath(GatheringChunksConstants.MOD_ID, "world_fragment_ore"))
+                        Identifier.fromNamespaceAndPath(GatheringChunksConstants.MOD_ID, "world_fragment_ore"))
         );
         net.fabricmc.fabric.api.biome.v1.BiomeModifications.addFeature(
                 net.fabricmc.fabric.api.biome.v1.BiomeSelectors.foundInOverworld(),
                 net.minecraft.world.level.levelgen.GenerationStep.Decoration.UNDERGROUND_ORES,
                 net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.PLACED_FEATURE,
-                        ResourceLocation.fromNamespaceAndPath(GatheringChunksConstants.MOD_ID, "deepslate_world_fragment_ore"))
+                        Identifier.fromNamespaceAndPath(GatheringChunksConstants.MOD_ID, "deepslate_world_fragment_ore"))
         );
 
         PayloadTypeRegistry.playS2C().register(S2COpenConfigPacket.TYPE, S2COpenConfigPacket.CODEC);
@@ -91,7 +103,11 @@ public class ChunkByChunkMod implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(C2SSaveConfigPacket.TYPE, (packet, context) -> {
             context.server().execute(() -> {
                 ServerPlayer player = context.player();
-                if (!player.hasPermissions(2)) {
+                if (!Commands.LEVEL_GAMEMASTERS.check(player.permissions())) {
+                    player.sendSystemMessage(Component.literal("§c[Gathering Chunks] No permission to modify server config."));
+                    return;
+                }
+                if (!Commands.LEVEL_GAMEMASTERS.check(player.permissions())) {
                     player.sendSystemMessage(Component.literal("§c[Gathering Chunks] No permission to modify server config."));
                     return;
                 }
@@ -104,7 +120,7 @@ public class ChunkByChunkMod implements ModInitializer {
 
                     ConfigUtil.saveDefaultConfig(context.server());
 
-                    String syncJson = gson.toJson(ChunkByChunkConfig.get().getGatheringChunksConfig());
+                    String syncJson = gson.toJson(ChunkByChunkConfig.get());
                     S2CSyncConfigPacket syncPacket = new S2CSyncConfigPacket(syncJson);
                     for (ServerPlayer p : context.server().getPlayerList().getPlayers()) {
                         Services.PLATFORM.sendConfigSyncPacket(p, syncPacket);
@@ -128,6 +144,7 @@ public class ChunkByChunkMod implements ModInitializer {
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
             LOGGER.info("[ChunkByChunkMod] Saving config before server shutdown...");
             ConfigUtil.saveDefaultConfig();
+            ChunkByChunkConfig.clearActiveWorld();
         });
 
         ServerTickEvents.END_SERVER_TICK.register(ServerEventHandler::onLevelTick);
@@ -150,12 +167,7 @@ public class ChunkByChunkMod implements ModInitializer {
             if (!(entity instanceof AbstractPiglin piglin)) return;
             if (!world.dimension().equals(Level.NETHER)) return;
             if (!(world.getChunkSource().getGenerator() instanceof SkyChunkGenerator)) return;
-            CompoundTag tag = new CompoundTag();
-            piglin.save(tag);
-            if (tag.getByte("IsImmuneToZombification") != 1) {
-                tag.putByte("IsImmuneToZombification", (byte) 1);
-                piglin.load(tag);
-            }
+            piglin.setImmuneToZombification(true);
         });
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
@@ -175,37 +187,40 @@ public class ChunkByChunkMod implements ModInitializer {
             if (!ChunkByChunkConfig.get().getGeneration().isEnabled())
                 return;
 
-            if (newPlayer.getRespawnPosition() != null)
+            if (newPlayer.getRespawnConfig() != null)
                 return;
 
-            ServerLevel level = newPlayer.serverLevel();
+            ServerLevel level = newPlayer.level();
             if (!level.dimension().equals(Level.OVERWORLD))
                 return;
 
             if (level.getChunkSource().getGenerator() instanceof SkyChunkGenerator) {
-                BlockPos spawnPos = level.getSharedSpawnPos();
+                BlockPos spawnPos = level.getRespawnData().pos();
                 ChunkPos spawnChunk = new ChunkPos(spawnPos);
 
                 LOGGER.debug("Forcing respawn to spawn chunk [{},{}]", spawnChunk.x, spawnChunk.z);
 
-                int safeY = level.getMaxBuildHeight();
-                LevelChunk spawnLevelChunk = level.getChunkAt(spawnChunk.getMiddleBlockPosition(0));
+                int safeY = -1;
+                LevelChunk spawnLevelChunk = level.getChunkSource().getChunkNow(spawnChunk.x, spawnChunk.z);
                 if (spawnLevelChunk != null) {
                     int candidateY = ChunkUtil.getSafeSpawnHeight(spawnLevelChunk, spawnChunk.getMiddleBlockX(), spawnChunk.getMiddleBlockZ());
-                    if (candidateY > level.getMinBuildHeight() + 10) {
+                    if (candidateY > level.getMinY() + 10) {
                         safeY = candidateY;
                     } else {
                         safeY = spawnLevelChunk.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, 8, 8) + 1;
                     }
                 }
 
+                if (safeY < 0) {
+                    return;
+                }
                 newPlayer.teleportTo(
                         level,
                         spawnChunk.getMiddleBlockX() + 0.5,
                         safeY,
                         spawnChunk.getMiddleBlockZ() + 0.5,
-                        newPlayer.getYRot(),
-                        newPlayer.getXRot());
+                        java.util.Set.of(), newPlayer.getYRot(),
+                        newPlayer.getXRot(), true);
             }
         });
 
@@ -214,10 +229,11 @@ public class ChunkByChunkMod implements ModInitializer {
                 return;
 
             ServerPlayer player = handler.getPlayer();
+            ConfigUtil.notifyLegacyWorldJoin(player);
 
             try {
                 com.google.gson.Gson gson = new com.google.gson.GsonBuilder().create();
-                String configJson = gson.toJson(ChunkByChunkConfig.get().getGatheringChunksConfig());
+                String configJson = gson.toJson(ChunkByChunkConfig.get());
                 S2CSyncConfigPacket packet = new S2CSyncConfigPacket(configJson);
                 Services.PLATFORM.sendConfigSyncPacket(player, packet);
                 LOGGER.debug("[ChunkByChunkMod] Synced config to player {} on join", player.getName().getString());
@@ -228,7 +244,7 @@ public class ChunkByChunkMod implements ModInitializer {
                 LOGGER.warn("[ChunkByChunkMod] Failed to sync config to player on join: {}", e.getMessage());
             }
 
-            ServerLevel level = player.serverLevel();
+            ServerLevel level = player.level();
             if (!level.dimension().equals(Level.OVERWORLD))
                 return;
 
@@ -240,17 +256,17 @@ public class ChunkByChunkMod implements ModInitializer {
                     INITIAL_SPAWNED_PLAYERS.add(player.getUUID());
 
                     final UUID firstJoinUUID = player.getUUID();
-                    final int MAX_WAIT_TICKS = 600;
+                    final int MAX_WAIT_TICKS = 12000; 
 
-                    server.tell(new net.minecraft.server.TickTask(server.getTickCount() + 1, () -> {
+                    DelayedTasks.runAfterTicks(server, 1, () -> {
                         ServerPlayer p = server.getPlayerList().getPlayer(firstJoinUUID);
                         if (p == null) return;
 
-                        ServerLevel lvl = p.serverLevel();
+                        ServerLevel lvl = p.level();
                         if (!lvl.dimension().equals(Level.OVERWORLD)) return;
                         if (!(lvl.getChunkSource().getGenerator() instanceof SkyChunkGenerator)) return;
 
-                        BlockPos currentSpawn = lvl.getSharedSpawnPos();
+                        BlockPos currentSpawn = lvl.getRespawnData().pos();
                         ChunkPos spawnChunk = new ChunkPos(currentSpawn);
                         boolean chunkReady = !SpawnChunkHelper.isEmptyChunk(lvl, spawnChunk);
 
@@ -259,23 +275,20 @@ public class ChunkByChunkMod implements ModInitializer {
                             LevelChunk spawnLevelChunk = lvl.getChunkAt(spawnChunk.getMiddleBlockPosition(0));
                             int safeY = (spawnLevelChunk != null)
                                     ? Math.max(ChunkUtil.getSafeSpawnHeight(spawnLevelChunk, spawnChunk.getMiddleBlockX(), spawnChunk.getMiddleBlockZ()),
-                                               lvl.getMinBuildHeight() + 10)
+                                               lvl.getMinY() + 10)
                                     : lvl.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE,
                                                spawnChunk.getMiddleBlockX(), spawnChunk.getMiddleBlockZ()) + 1;
                             p.teleportTo(lvl,
                                     spawnChunk.getMiddleBlockX() + 0.5, safeY,
                                     spawnChunk.getMiddleBlockZ() + 0.5,
-                                    p.getYRot(), p.getXRot());
+                                    java.util.Set.of(), p.getYRot(), p.getXRot(), true);
                         } else {
-                            int holdY = lvl.getMaxBuildHeight() - 1;
-                            LOGGER.info("[FirstJoin] Spawn chunk not ready - parking player at Y={} above [{},{}]", holdY, spawnChunk.x, spawnChunk.z);
-                            p.teleportTo(lvl,
-                                    spawnChunk.getMiddleBlockX() + 0.5, holdY,
-                                    spawnChunk.getMiddleBlockZ() + 0.5,
-                                    p.getYRot(), p.getXRot());
+                            LOGGER.info("[FirstJoin] Spawn chunk not ready - holding player in place until it is placed");
+                            p.setNoGravity(true);
+                            p.setInvulnerable(true);
                             scheduleSpawnTeleport(server, firstJoinUUID, server.getTickCount(), MAX_WAIT_TICKS);
                         }
-                    }));
+                    });
                 }
             }
         });
@@ -292,8 +305,8 @@ public class ChunkByChunkMod implements ModInitializer {
         ResourceManagerHelper.get(PackType.SERVER_DATA)
                 .registerReloadListener(new SimpleSynchronousResourceReloadListener() {
                     @Override
-                    public ResourceLocation getFabricId() {
-                        return ResourceLocation.fromNamespaceAndPath(GatheringChunksConstants.MOD_ID, "server_data");
+                    public Identifier getFabricId() {
+                        return Identifier.fromNamespaceAndPath(GatheringChunksConstants.MOD_ID, "server_data");
                     }
 
                     @Override
@@ -360,17 +373,17 @@ public class ChunkByChunkMod implements ModInitializer {
 
     private static void scheduleSpawnTeleport(net.minecraft.server.MinecraftServer server, UUID playerUUID,
             int startTick, int maxWaitTicks) {
-        server.tell(new net.minecraft.server.TickTask(server.getTickCount() + 5, () -> {
+        DelayedTasks.runAfterTicks(server, 5, () -> {
             if (!server.isRunning()) return;
 
             ServerPlayer p = server.getPlayerList().getPlayer(playerUUID);
             if (p == null) return;
 
-            ServerLevel lvl = p.serverLevel();
+            ServerLevel lvl = p.level();
             if (!lvl.dimension().equals(Level.OVERWORLD)) return;
             if (!(lvl.getChunkSource().getGenerator() instanceof SkyChunkGenerator)) return;
 
-            BlockPos spawnPos = lvl.getSharedSpawnPos();
+            BlockPos spawnPos = lvl.getRespawnData().pos();
             ChunkPos spawnChunk = new ChunkPos(spawnPos);
 
             boolean chunkReady = !SpawnChunkHelper.isEmptyChunk(lvl, spawnChunk);
@@ -398,7 +411,7 @@ public class ChunkByChunkMod implements ModInitializer {
             if (spawnLevelChunk != null) {
                 int candidateY = ChunkUtil.getSafeSpawnHeight(
                         spawnLevelChunk, spawnChunk.getMiddleBlockX(), spawnChunk.getMiddleBlockZ());
-                if (candidateY > lvl.getMinBuildHeight() + 10) {
+                if (candidateY > lvl.getMinY() + 10) {
                     safeY = candidateY;
                 } else {
                     safeY = spawnLevelChunk.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, 8, 8) + 1;
@@ -412,8 +425,10 @@ public class ChunkByChunkMod implements ModInitializer {
                     spawnChunk.getMiddleBlockX() + 0.5,
                     safeY,
                     spawnChunk.getMiddleBlockZ() + 0.5,
-                    p.getYRot(),
-                    p.getXRot());
-        }));
+                    java.util.Set.of(), p.getYRot(),
+                    p.getXRot(), true);
+            p.setNoGravity(false);
+            p.setInvulnerable(false);
+        });
     }
 }

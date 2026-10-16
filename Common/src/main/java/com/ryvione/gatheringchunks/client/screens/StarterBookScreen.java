@@ -1,21 +1,32 @@
+/*
+ * Original work Copyright (c) immortius
+ * Modified work Copyright (c) 2026 Ryvione
+ *
+ * This file is part of Gathering Chunks (Ryvione's Fork).
+ * Original: https://github.com/immortius/chunkbychunk
+ *
+ * Licensed under the MIT License. See LICENSE file in the project root for details.
+ */
+
 package com.ryvione.gatheringchunks.client.screens;
 
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.FormattedCharSequence;
 
 public class StarterBookScreen extends Screen {
-    private static final ResourceLocation BOOK_TEXTURE =
-        ResourceLocation.withDefaultNamespace("textures/gui/book.png");
+    private static final Identifier BOOK_TEXTURE =
+        Identifier.withDefaultNamespace("textures/gui/book.png");
 
     private final int imageWidth = 192;
     private final int imageHeight = 192;
     private int currPage = 0;
     private final int maxPages = 6;
-    private int previousBlur;
 
     public StarterBookScreen() {
         super(Component.literal("Gathering Chunks Guide"));
@@ -24,10 +35,6 @@ public class StarterBookScreen extends Screen {
     @Override
     protected void init() {
         super.init();
-
-        previousBlur = Minecraft.getInstance().options.menuBackgroundBlurriness().get();
-        Minecraft.getInstance().options.menuBackgroundBlurriness().set(0);
-        Minecraft.getInstance().options.save();
 
         int x = (this.width - imageWidth) / 2;
         int y = (this.height - imageHeight) / 2;
@@ -49,20 +56,19 @@ public class StarterBookScreen extends Screen {
     }
 
     @Override
-    public void removed() {
-        Minecraft.getInstance().options.menuBackgroundBlurriness().set(previousBlur);
-        Minecraft.getInstance().options.save();
-        super.removed();
+    public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        super.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+        int x = (this.width - imageWidth) / 2;
+        int y = (this.height - imageHeight) / 2;
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, BOOK_TEXTURE, x, y, 0, 0, imageWidth, imageHeight, 256, 256);
     }
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
 
         int x = (this.width - imageWidth) / 2;
         int y = (this.height - imageHeight) / 2;
-
-        guiGraphics.blit(BOOK_TEXTURE, x, y, 0, 0, imageWidth, imageHeight);
 
         String title = "";
         String content = "";
@@ -94,22 +100,18 @@ public class StarterBookScreen extends Screen {
             }
         }
 
-        guiGraphics.drawString(font, title, x + 45, y + 25, 0x000000, false);
+        guiGraphics.drawString(font, title, x + 45, y + 25, 0xFF000000, false);
 
-        guiGraphics.drawWordWrap(
-            font,
-            Component.literal(content),
-            x + 45,
-            y + 42,
-            100,
-            0x000000
-        );
+        int lineY = y + 42;
+        for (FormattedCharSequence line : font.split(Component.literal(content), 100)) {
+            guiGraphics.drawString(font, line, x + 45, lineY, 0xFF000000, false);
+            lineY += font.lineHeight;
+        }
 
         String pageStr = (currPage + 1) + "/" + maxPages;
         int pageW = font.width(pageStr);
-        guiGraphics.drawString(font, pageStr, x + imageWidth / 2 - pageW / 2, y + 156, 0x404040, false);
+        guiGraphics.drawString(font, pageStr, x + imageWidth / 2 - pageW / 2, y + 156, 0xFF404040, false);
 
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
     }
 
     @Override

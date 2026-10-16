@@ -14,6 +14,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.ryvione.gatheringchunks.common.GatheringChunksConstants;
 import com.ryvione.gatheringchunks.config.ChunkByChunkConfig;
+import com.ryvione.gatheringchunks.config.WorldConfigStore;
 import com.ryvione.gatheringchunks.config.system.ConfigSystem;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -39,12 +40,17 @@ public final class ConfigUtil {
     private static final Map<Path, String> knownFileChecksums = new ConcurrentHashMap<>();
     private static volatile Thread configWatcherThread;
     private static final long WATCH_DEBOUNCE_MS = 500;
+    private static volatile boolean legacyWorldMigrated = false;
+    private static volatile ChunkByChunkConfig activeWorldSettings = null;
+    private static final String LEGACY_WORLD_NOTICE =
+            "[Gathering Chunks] This world was created before per-world settings. It is being migrated now, "
+            + "using the current global settings. The migration may take a while, depending on what is ported.";
 
     public static void loadDefaultConfig() {
         synchronized (system) {
             Path configPath = ConfigSystem.getCentralConfigPath(GatheringChunksConstants.CONFIG_FILE);
             LOGGER.info("[ConfigUtil] Loading config from centralized location: {}", configPath);
-            system.synchConfig(configPath, ChunkByChunkConfig.get());
+            system.synchConfig(configPath, ChunkByChunkConfig.global());
             rememberChecksum(configPath);
         }
     }
@@ -119,7 +125,7 @@ public final class ConfigUtil {
             LOGGER.info("[ConfigUtil] Detected external config change at {}, hot-reloading", configPath);
             ChunkByChunkConfig backup = deepCopyConfig();
             try {
-                system.reloadConfig(configPath, ChunkByChunkConfig.get());
+                system.reloadConfig(configPath, ChunkByChunkConfig.global());
                 rememberChecksum(configPath);
                 LOGGER.info("[ConfigUtil] Config hot-reloaded successfully from {}", configPath);
             } catch (Exception e) {
@@ -162,7 +168,7 @@ public final class ConfigUtil {
 
     private static ChunkByChunkConfig deepCopyConfig() {
         try {
-            return GSON.fromJson(GSON.toJson(ChunkByChunkConfig.get()), ChunkByChunkConfig.class);
+            return GSON.fromJson(GSON.toJson(ChunkByChunkConfig.global()), ChunkByChunkConfig.class);
         } catch (Exception e) {
             LOGGER.warn("[ConfigUtil] Could not snapshot config for error fallback", e);
             return null;
@@ -175,7 +181,7 @@ public final class ConfigUtil {
         }
         try {
             ChunkByChunkConfig restored = GSON.fromJson(GSON.toJson(backup), ChunkByChunkConfig.class);
-            copyInto(restored, ChunkByChunkConfig.get());
+            copyInto(restored, ChunkByChunkConfig.global());
         } catch (Exception e) {
             LOGGER.error("[ConfigUtil] Failed to restore previous config values after reload failure", e);
         }
@@ -190,6 +196,8 @@ public final class ConfigUtil {
         copyField(from, to, "worldScannerConfig");
         copyField(from, to, "worldMenderConfig");
         copyField(from, to, "bedrockChest");
+        copyField(from, to, "debug");
+        copyField(from, to, "performance");
     }
 
     private static void copyField(ChunkByChunkConfig from, ChunkByChunkConfig to, String fieldName) {
@@ -209,7 +217,7 @@ public final class ConfigUtil {
             LOGGER.info("[ConfigUtil] Reloading config from: {}", configPath);
             ChunkByChunkConfig backup = deepCopyConfig();
             try {
-                system.reloadConfig(configPath, ChunkByChunkConfig.get());
+                system.reloadConfig(configPath, ChunkByChunkConfig.global());
                 rememberChecksum(configPath);
             } catch (Exception e) {
                 restoreConfig(backup);
@@ -221,46 +229,69 @@ public final class ConfigUtil {
     public static void reloadConfig(net.minecraft.server.MinecraftServer server) {
         synchronized (system) {
             Path centralConfigPath = ConfigSystem.getCentralConfigPath(GatheringChunksConstants.CONFIG_FILE);
-            if (server == null) {
-                system.reloadConfig(centralConfigPath, ChunkByChunkConfig.get());
-                return;
-            }
-            Path worldConfigPath = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT)
-                    .resolve("serverconfig")
-                    .resolve(GatheringChunksConstants.CONFIG_FILE);
-
-            boolean centralExists = Files.exists(centralConfigPath);
-            boolean worldExists = Files.exists(worldConfigPath);
-            Path source = centralConfigPath;
-            if (centralExists && worldExists) {
-                try {
-                    if (Files.getLastModifiedTime(worldConfigPath).compareTo(Files.getLastModifiedTime(centralConfigPath)) > 0) {
-                        source = worldConfigPath;
-                    }
-                } catch (IOException e) {
-                    LOGGER.warn("[ConfigUtil] Could not compare config file timestamps, defaulting to central config", e);
-                }
-            } else if (worldExists) {
-                source = worldConfigPath;
-            }
-            LOGGER.info("[ConfigUtil] Reloading config from: {}", source);
             ChunkByChunkConfig backup = deepCopyConfig();
             try {
-                system.reloadConfig(source, ChunkByChunkConfig.get());
+                system.reloadConfig(centralConfigPath, ChunkByChunkConfig.global());
             } catch (Exception e) {
                 restoreConfig(backup);
                 LOGGER.error("[ConfigUtil] Config reload failed - keeping previous values (error fallback)", e);
                 return;
             }
-            system.write(centralConfigPath, ChunkByChunkConfig.get());
             rememberChecksum(centralConfigPath);
-            if (worldExists) {
-                system.write(worldConfigPath, ChunkByChunkConfig.get());
-                rememberChecksum(worldConfigPath);
-            }
+            activateWorldSettings(server);
         }
     }
 
+    private static void activateWorldSettings(net.minecraft.server.MinecraftServer server) {
+        if (server == null || server.isDedicatedServer()) {
+            ChunkByChunkConfig.clearActiveWorld();
+            activeWorldSettings = null;
+            legacyWorldMigrated = false;
+            return;
+        }
+        Path worldDir = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT);
+        ChunkByChunkConfig settings = WorldConfigStore.load(worldDir);
+        legacyWorldMigrated = settings == null;
+        if (settings == null) {
+            settings = WorldConfigStore.copyOfGlobalWorldSettings();
+            WorldConfigStore.save(worldDir, settings);
+            LOGGER.warn("[ConfigUtil] World has no saved GC settings - migrated it with the current global settings");
+        }
+        activeWorldSettings = settings;
+        ChunkByChunkConfig.setActiveWorld(ChunkByChunkConfig.global().worldView(settings));
+        LOGGER.info("[ConfigUtil] Using the world's own GC settings from {}", worldDir.resolve(WorldConfigStore.FILE_NAME));
+    }
+
+    public static boolean writeActiveWorldSettings(net.minecraft.server.MinecraftServer server) {
+        ChunkByChunkConfig settings = activeWorldSettings;
+        if (server == null || settings == null) {
+            return false;
+        }
+        try {
+            WorldConfigStore.save(server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT), settings);
+            LOGGER.info("[ConfigUtil] Saved the world's GC settings");
+            return true;
+        } catch (Exception e) {
+            LOGGER.error("[ConfigUtil] Could not save the world's GC settings", e);
+            return false;
+        }
+    }
+
+    public static void saveActiveWorldSettings(net.minecraft.server.MinecraftServer server) {
+        if (!writeActiveWorldSettings(server)) {
+            return;
+        }
+        var packet = new com.ryvione.gatheringchunks.common.network.S2CSyncConfigPacket(GSON.toJson(ChunkByChunkConfig.get()));
+        for (net.minecraft.server.level.ServerPlayer player : server.getPlayerList().getPlayers()) {
+            com.ryvione.gatheringchunks.interop.Services.PLATFORM.sendConfigSyncPacket(player, packet);
+        }
+    }
+
+    public static void notifyLegacyWorldJoin(net.minecraft.server.level.ServerPlayer player) {
+        if (legacyWorldMigrated) {
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§e" + LEGACY_WORLD_NOTICE));
+        }
+    }
 
     public static void saveDefaultConfig() {
         saveDefaultConfig(null);
@@ -271,15 +302,8 @@ public final class ConfigUtil {
             Path configPath = ConfigSystem.getCentralConfigPath(GatheringChunksConstants.CONFIG_FILE);
             reconcileExternalChanges(configPath);
             LOGGER.info("[ConfigUtil] Saving config to: {}", configPath);
-            system.write(configPath, ChunkByChunkConfig.get());
+            system.write(configPath, ChunkByChunkConfig.global());
             rememberChecksum(configPath);
-            if (server != null) {
-                Path worldConfigPath = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT)
-                        .resolve("serverconfig")
-                        .resolve(GatheringChunksConstants.CONFIG_FILE);
-                system.write(worldConfigPath, ChunkByChunkConfig.get());
-                rememberChecksum(worldConfigPath);
-            }
         }
     }
 
@@ -290,7 +314,7 @@ public final class ConfigUtil {
         LOGGER.info("[ConfigUtil] Detected manual config edit at {} before save - reloading it first", configPath);
         ChunkByChunkConfig backup = deepCopyConfig();
         try {
-            system.reloadConfig(configPath, ChunkByChunkConfig.get());
+            system.reloadConfig(configPath, ChunkByChunkConfig.global());
             LOGGER.info("[ConfigUtil] Manual config edits loaded successfully");
         } catch (Exception e) {
             restoreConfig(backup);

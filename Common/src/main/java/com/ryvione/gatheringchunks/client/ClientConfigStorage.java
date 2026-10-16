@@ -36,6 +36,7 @@ public class ClientConfigStorage {
     private static Path storagePath;
     private static Map<String, ServerConfigOverride> serverConfigs = new HashMap<>();
     private static String currentServerId = null;
+    private static boolean remoteSessionActive = false;
 
     public static class ServerConfigOverride {
         public Boolean preventFluidFlowIntoVoid;
@@ -77,6 +78,14 @@ public class ClientConfigStorage {
         return serverAddress.toLowerCase();
     }
 
+    public static void endServerSession() {
+        currentServerId = null;
+        if (remoteSessionActive) {
+            ChunkByChunkConfig.clearActiveWorld();
+            remoteSessionActive = false;
+        }
+    }
+
     public static void setCurrentServer(String serverId) {
         currentServerId = serverId;
         LOGGER.debug("[ClientConfigStorage] Current server set to: {}", serverId);
@@ -94,25 +103,22 @@ public class ClientConfigStorage {
                 return;
             }
 
-            GatheringChunksConfig syncedConfig = GSON.fromJson(configJson, GatheringChunksConfig.class);
-            if (syncedConfig == null) {
+            ChunkByChunkConfig syncedWorld = GSON.fromJson(configJson, ChunkByChunkConfig.class);
+            if (syncedWorld == null) {
                 LOGGER.error("[ClientConfigStorage] Failed to deserialize config from JSON");
+                return;
+            }
+            GatheringChunksConfig syncedConfig = syncedWorld.getGatheringChunksConfig();
+
+            if (Minecraft.getInstance().getSingleplayerServer() != null) {
                 return;
             }
 
             GatheringChunksConfig localConfig = ChunkByChunkConfig.get().getGatheringChunksConfig();
             List<String> mismatches = detectMismatches(localConfig, syncedConfig);
 
-            try {
-                localConfig.setPreventFluidFlowIntoVoid(syncedConfig.isPreventFluidFlowIntoVoid());
-                localConfig.setAutoSpawnTrees(syncedConfig.isAutoSpawnTrees());
-                localConfig.setMobsDropFragments(syncedConfig.isMobsDropFragments());
-                localConfig.setFragmentDropChance(syncedConfig.getFragmentDropChance());
-                localConfig.setMinFragmentDrop(syncedConfig.getMinFragmentDrop());
-                localConfig.setMaxFragmentDrop(syncedConfig.getMaxFragmentDrop());
-            } catch (Exception fieldError) {
-                LOGGER.warn("[ClientConfigStorage] Error applying individual config fields: {}", fieldError.getMessage());
-            }
+            ChunkByChunkConfig.setActiveWorld(syncedWorld);
+            remoteSessionActive = true;
 
             if (!mismatches.isEmpty()) {
                 LOGGER.info("[ClientConfigStorage] Config mismatch detected with server - {} fields overridden", mismatches.size());
@@ -154,10 +160,10 @@ public class ClientConfigStorage {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
-        mc.player.sendSystemMessage(Component.literal(
-                "§6[Gathering Chunks] §eYour config differed from the server's. The server config has been applied:"));
+        mc.player.displayClientMessage(Component.literal(
+                "§6[Gathering Chunks] §eYour config differed from the server's. The server config has been applied:"), false);
         for (String mismatch : mismatches) {
-            mc.player.sendSystemMessage(Component.literal("§7  » §f" + mismatch));
+            mc.player.displayClientMessage(Component.literal("§7  » §f" + mismatch), false);
         }
     }
 

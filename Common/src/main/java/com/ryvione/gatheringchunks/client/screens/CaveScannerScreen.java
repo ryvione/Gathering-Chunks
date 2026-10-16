@@ -15,21 +15,24 @@ import com.ryvione.gatheringchunks.common.blockEntities.CaveScannerBlockEntity;
 import com.ryvione.gatheringchunks.common.menus.CaveScannerMenu;
 import com.ryvione.gatheringchunks.common.util.ConfigUtil;
 import com.ryvione.gatheringchunks.config.WorldScannerConfig;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.renderer.state.MapRenderState;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import com.ryvione.gatheringchunks.config.ChunkByChunkConfig;
 
 public class CaveScannerScreen extends AbstractContainerScreen<CaveScannerMenu> {
 
-    public static final ResourceLocation CONTAINER_TEXTURE = ResourceLocation.fromNamespaceAndPath(
+    public static final Identifier CONTAINER_TEXTURE = Identifier.fromNamespaceAndPath(
             GatheringChunksConstants.MOD_ID, "textures/gui/container/cavescanner.png"
     );
 
@@ -119,14 +122,15 @@ public class CaveScannerScreen extends AbstractContainerScreen<CaveScannerMenu> 
         if (mapX >= 0 && mapY >= 0 && mapX < MAP_DIMENSIONS && mapY < MAP_DIMENSIONS) {
             int chunkX = mapX / CaveScannerBlockEntity.SCAN_ZOOM - CaveScannerBlockEntity.SCAN_CENTER;
             int chunkZ = mapY / CaveScannerBlockEntity.SCAN_ZOOM - CaveScannerBlockEntity.SCAN_CENTER;
-            guiGraphics.renderTooltip(font, Component.literal("Chunk: [" + chunkX + ", " + chunkZ + "]"), mouseX, mouseY);
+            guiGraphics.setTooltipForNextFrame(font, Component.literal("Chunk: [" + (menu.getScannerChunkX() + chunkX) + ", "
+                    + (menu.getScannerChunkZ() + chunkZ) + "]  (offset " + chunkX + ", " + chunkZ + ")"), mouseX, mouseY);
         }
 
         int helpX = 285;
         int helpY = 6;
         if (mouseX >= leftPos + helpX && mouseX <= leftPos + helpX + 10 &&
                 mouseY >= topPos + helpY && mouseY <= topPos + helpY + 10) {
-            guiGraphics.renderTooltip(font, java.util.List.of(
+            guiGraphics.setTooltipForNextFrame(font, java.util.List.of(
                     Component.literal("§6Cave Types:").getVisualOrderText(),
                     Component.literal("§f- §aGreen: §7Lush Caves").getVisualOrderText(),
                     Component.literal("§f- §6Brown: §7Dripstone Caves").getVisualOrderText(),
@@ -152,10 +156,8 @@ public class CaveScannerScreen extends AbstractContainerScreen<CaveScannerMenu> 
             animCounter -= TICKS_PER_FRAME * NUM_FRAMES;
         }
 
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
 
-        guiGraphics.blit(CONTAINER_TEXTURE, leftPos, topPos, 0, 0, this.imageWidth, this.imageHeight, MAIN_TEXTURE_DIM, MAIN_TEXTURE_DIM);
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, CONTAINER_TEXTURE, leftPos, topPos, 0, 0, this.imageWidth, this.imageHeight, MAIN_TEXTURE_DIM, MAIN_TEXTURE_DIM);
 
         if (menu.getMaxEnergy() > 0) {
             float energyPercent = (float) menu.getEnergy() / menu.getMaxEnergy();
@@ -166,7 +168,7 @@ public class CaveScannerScreen extends AbstractContainerScreen<CaveScannerMenu> 
             guiGraphics.fill(barX - 1, barY - 1, barX + PROGRESS_BAR_WIDTH + 1, barY + PROGRESS_BAR_HEIGHT + 1, 0x88FFFFFF);
             guiGraphics.fill(barX, barY, barX + PROGRESS_BAR_WIDTH, barY + PROGRESS_BAR_HEIGHT, 0xFF333333);
             guiGraphics.fill(barX, barY, barX + filledWidth, barY + PROGRESS_BAR_HEIGHT, 0xFF00FFFF);
-            guiGraphics.drawString(font, (int) (energyPercent * 100) + "%", barX + PROGRESS_BAR_WIDTH + 3, barY - 1, 0xFFFFFF);
+            guiGraphics.drawString(font, (int) (energyPercent * 100) + "%", barX + PROGRESS_BAR_WIDTH + 3, barY - 1, 0xFFFFFFFF);
         }
 
         if (menu.isMapAvailable()) {
@@ -197,27 +199,21 @@ public class CaveScannerScreen extends AbstractContainerScreen<CaveScannerMenu> 
         int mapScreenY = topPos + 18;
 
         guiGraphics.enableScissor(mapScreenX, mapScreenY, mapScreenX + MAP_DIMENSIONS, mapScreenY + MAP_DIMENSIONS);
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(mapScreenX + panX, mapScreenY + panY, 1.0D);
-        guiGraphics.pose().scale(zoomLevel, zoomLevel, 1.0f);
+        guiGraphics.pose().pushMatrix();
+        guiGraphics.pose().translate(mapScreenX + panX, mapScreenY + panY);
+        guiGraphics.pose().scale(zoomLevel, zoomLevel);
 
         var mapId = menu.getMapId();
         if (mapId != null) {
             var mapData = minecraft.level.getMapData(mapId);
             if (mapData != null) {
-                minecraft.gameRenderer.getMapRenderer().render(
-                        guiGraphics.pose(),
-                        guiGraphics.bufferSource(),
-                        mapId,
-                        mapData,
-                        true,
-                        0xFFFFFF
-                );
+                var mapState = new MapRenderState();
+                minecraft.getMapRenderer().extractRenderState(mapId, mapData, mapState);
+                guiGraphics.submitMapRenderState(mapState);
             }
         }
 
-        guiGraphics.flush();
-        guiGraphics.pose().popPose();
+        guiGraphics.pose().popMatrix();
         guiGraphics.disableScissor();
     }
 
@@ -242,9 +238,9 @@ public class CaveScannerScreen extends AbstractContainerScreen<CaveScannerMenu> 
         int endY = (int) Math.ceil(visMaxY / chunkPixelSize) * chunkPixelSize;
 
         guiGraphics.enableScissor(mapScreenX, mapScreenY, mapScreenX + MAP_DIMENSIONS, mapScreenY + MAP_DIMENSIONS);
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(mapScreenX + panX, mapScreenY + panY, 2.0D);
-        guiGraphics.pose().scale(zoomLevel, zoomLevel, 1.0f);
+        guiGraphics.pose().pushMatrix();
+        guiGraphics.pose().translate(mapScreenX + panX, mapScreenY + panY);
+        guiGraphics.pose().scale(zoomLevel, zoomLevel);
 
         for (int x = startX; x <= endX; x += chunkPixelSize) {
             guiGraphics.fill(x, startY, x + 1, endY, 0x8800FF00);
@@ -265,8 +261,7 @@ public class CaveScannerScreen extends AbstractContainerScreen<CaveScannerMenu> 
             guiGraphics.fill(selX + chunkPixelSize - 1, selZ, selX + chunkPixelSize, selZ + chunkPixelSize, color);
         }
 
-        guiGraphics.flush();
-        guiGraphics.pose().popPose();
+        guiGraphics.pose().popMatrix();
         guiGraphics.disableScissor();
     }
 
@@ -275,14 +270,14 @@ public class CaveScannerScreen extends AbstractContainerScreen<CaveScannerMenu> 
         if (config.getWorldScannerScanMode() == WorldScannerConfig.WorldScannerMode.Manual) {
             int x = leftPos + 8;
             int y = topPos + 102;
-            guiGraphics.drawString(font, "§eX: " + config.getManualChunkOffsetX(), x, y, 0xFFFFFF);
-            guiGraphics.drawString(font, "§eZ: " + config.getManualChunkOffsetZ(), x, y + 10, 0xFFFFFF);
+            guiGraphics.drawString(font, "§eX: " + config.getManualChunkOffsetX(), x, y, 0xFFFFFFFF);
+            guiGraphics.drawString(font, "§eZ: " + config.getManualChunkOffsetZ(), x, y + 10, 0xFFFFFFFF);
         }
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (Screen.hasControlDown()) {
+        if (minecraft.hasControlDown()) {
             int relX = (int) (mouseX - leftPos - 174);
             int relY = (int) (mouseY - topPos - 18);
 
@@ -315,7 +310,10 @@ public class CaveScannerScreen extends AbstractContainerScreen<CaveScannerMenu> 
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
         int relX = (int) (mouseX - leftPos - 174);
         int relY = (int) (mouseY - topPos - 18);
         boolean overMap = relX >= 0 && relY >= 0 && relX < MAP_DIMENSIONS && relY < MAP_DIMENSIONS;
@@ -337,11 +335,14 @@ public class CaveScannerScreen extends AbstractContainerScreen<CaveScannerMenu> 
             return true;
         }
 
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    public boolean mouseReleased(MouseButtonEvent event) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
         if (button == 2) {
             isMiddlePanning = false;
             return true;
@@ -381,11 +382,14 @@ public class CaveScannerScreen extends AbstractContainerScreen<CaveScannerMenu> 
             }
             return true;
         }
-        return super.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(event);
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
         if (isMiddlePanning && button == 2) {
             panX += (float) (mouseX - lastMouseX);
             panY += (float) (mouseY - lastMouseY);
@@ -409,6 +413,6 @@ public class CaveScannerScreen extends AbstractContainerScreen<CaveScannerMenu> 
             lastMouseY = mouseY;
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        return super.mouseDragged(event, dragX, dragY);
     }
 }

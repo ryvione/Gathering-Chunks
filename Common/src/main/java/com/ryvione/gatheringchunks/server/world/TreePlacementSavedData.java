@@ -9,6 +9,7 @@
  */
 package com.ryvione.gatheringchunks.server.world;
 
+import com.ryvione.gatheringchunks.util.SavedDataCompat;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -27,23 +28,25 @@ public class TreePlacementSavedData extends SavedData {
     }
 
     public static TreePlacementSavedData get(ServerLevel level) {
-        return level.getDataStorage().computeIfAbsent(
-                new Factory<>(TreePlacementSavedData::new, TreePlacementSavedData::load, DataFixTypes.LEVEL),
-                DATA_ID);
+        return level.getChunkSource().getDataStorage().computeIfAbsent(SavedDataCompat.of(
+                DATA_ID,
+                TreePlacementSavedData::new,
+                TreePlacementSavedData::load,
+                data -> data.save(new CompoundTag())
+        ));
     }
 
-    public static TreePlacementSavedData load(CompoundTag tag, HolderLookup.Provider provider) {
+    public static TreePlacementSavedData load(CompoundTag tag) {
         TreePlacementSavedData data = new TreePlacementSavedData();
         if (tag.contains("ProcessedChunks")) {
-            for (long pos : tag.getLongArray("ProcessedChunks")) {
+            for (long pos : tag.getLongArray("ProcessedChunks").orElse(new long[0])) {
                 data.processedChunks.add(pos);
             }
         }
         return data;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
+    public CompoundTag save(CompoundTag tag) {
         tag.putLongArray("ProcessedChunks", processedChunks.stream().mapToLong(Long::longValue).toArray());
         return tag;
     }

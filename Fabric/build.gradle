@@ -1,11 +1,13 @@
 plugins {
-    id 'dev.architectury.loom' version '1.13.467'
+    id 'dev.architectury.loom' version '1.17.493'
     id 'maven-publish'
 }
 
 version = rootProject.version
 group = rootProject.group
-archivesBaseName = "${mod_name}-Fabric-${minecraft_version}"
+base {
+    archivesName = "${mod_name}-Fabric-${minecraft_version}"
+}
 
 repositories {
     maven {
@@ -36,9 +38,7 @@ dependencies {
 }
 
 loom {
-    mixin {
-        defaultRefmapName = "${mod_name}-fabric-${minecraft_version}-refmap.json"
-    }
+    accessWidenerPath = file('src/main/resources/gatheringchunks.accesswidener')
     runs {
         client {
             client()
@@ -90,7 +90,7 @@ tasks.withType(Javadoc).configureEach {
     options.addStringOption('Xdoclint:none', '-quiet')
 }
 
-tasks.withType(JavaCompile).configureEach {
+tasks.named('compileJava').configure {
     source(project(':Common').sourceSets.main.allSource)
 }
 
@@ -122,7 +122,7 @@ publishing {
     publications {
         mavenJava(MavenPublication) {
             groupId project.group
-            artifactId project.archivesBaseName
+            artifactId project.base.archivesName.get()
             version project.version
             from components.java
         }

@@ -1,23 +1,17 @@
 {
-  "type" : "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shaped",
   "pattern": [
     "dCd",
     "CXC",
     "dCd"
   ],
-  "key" : {
-    "d" : {
-      "item": "minecraft:dirt"
-    },
-    "C" : {
-      "item": "minecraft:copper_ingot"
-    },
-    "X" : {
-      "item": "gatheringchunks:worldcore"
-    }
+  "key": {
+    "d": "minecraft:dirt",
+    "C": "minecraft:copper_ingot",
+    "X": "gatheringchunks:worldcore"
   },
-  "result" : {
-    "id" : "gatheringchunks:plainschunkspawner",
-    "count" : 1
+  "result": {
+    "id": "gatheringchunks:plainschunkspawner",
+    "count": 1
   }
 }

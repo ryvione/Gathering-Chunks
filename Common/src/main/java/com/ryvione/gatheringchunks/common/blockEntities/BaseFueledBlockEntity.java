@@ -10,6 +10,9 @@
 
 package com.ryvione.gatheringchunks.common.blockEntities;
 
+import net.minecraft.world.entity.player.StackedItemContents;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -66,19 +69,28 @@ public abstract class BaseFueledBlockEntity extends BaseContainerBlockEntity imp
         return false;
     }
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider provider) {
-        super.loadAdditional(tag, provider);
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (this.level != null) {
+            net.minecraft.world.Containers.dropContents(this.level, pos, this);
+            this.level.updateNeighbourForOutputSignal(pos, state.getBlock());
+        }
+    }
+
+    @Override
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
         this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
-        ContainerHelper.loadAllItems(tag, this.items, provider);
-        this.chargedFuel = tag.getInt("ChargedFuel");
-        this.remainingFuel = tag.getInt("RemainingFuel");
+        ContainerHelper.loadAllItems(input, this.items);
+        this.chargedFuel = input.getIntOr("ChargedFuel", 0);
+        this.remainingFuel = input.getIntOr("RemainingFuel", 0);
     }
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider provider) {
-        super.saveAdditional(tag, provider);
-        tag.putInt("ChargedFuel", this.chargedFuel);
-        tag.putInt("RemainingFuel", this.remainingFuel);
-        ContainerHelper.saveAllItems(tag, this.items, provider);
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        output.putInt("ChargedFuel", this.chargedFuel);
+        output.putInt("RemainingFuel", this.remainingFuel);
+        ContainerHelper.saveAllItems(output, this.items);
     }
     public boolean isFuel(ItemStack itemStack) {
         if (itemFuel.getOrDefault(itemStack.getItem(), () -> 0).get() > 0) {
@@ -150,7 +162,7 @@ public abstract class BaseFueledBlockEntity extends BaseContainerBlockEntity imp
         return this.items;
     }
     @Override
-    public void fillStackedContents(StackedContents contents) {
+    public void fillStackedContents(StackedItemContents contents) {
         for (ItemStack itemstack : items) {
             contents.accountStack(itemstack);
         }

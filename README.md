@@ -5,10 +5,11 @@
 > The mod can still be compiled successfully, but some features may be incomplete or unstable and could potentially cause **world corruption, crashes, or other unexpected behavior**.
 >
 > **Back up your worlds before using this development version.**
+>
 
-[![Minecraft Version](https://img.shields.io/badge/Minecraft-1.21.1-brightgreen.svg)](https://www.minecraft.net/)
-[![NeoForge](https://img.shields.io/badge/NeoForge-1.21.1-orange.svg)](https://neoforged.net/)
-[![Fabric](https://img.shields.io/badge/Fabric-1.21.1-blue.svg)](https://fabricmc.net/)
+[![Minecraft Version](https://img.shields.io/badge/Minecraft-1.21.11-brightgreen.svg)](https://www.minecraft.net/)
+[![NeoForge](https://img.shields.io/badge/NeoForge-1.21.11-orange.svg)](https://neoforged.net/)
+[![Fabric](https://img.shields.io/badge/Fabric-1.21.11-blue.svg)](https://fabricmc.net/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **[Join the Discord Server](https://discord.gg/3S9aKukmmJ)**
@@ -40,7 +41,7 @@ This repository is maintained independently from the original project.
 
 ### Requirements
 
-* Minecraft **1.21.1**
+* Minecraft **1.21.11**
 * Java version required by the project
 * Git
 
@@ -48,7 +49,7 @@ This repository is maintained independently from the original project.
 
 ```bash
 # Clone the repository
-git clone https://github.com/ryvione/Gathering-Chunks.git
+git clone -b dev/1.21.11 https://github.com/ryvione/Gathering-Chunks.git
 
 # Enter the project directory
 cd Gathering-Chunks

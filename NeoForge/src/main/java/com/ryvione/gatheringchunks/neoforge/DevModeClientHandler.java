@@ -53,7 +53,7 @@ public class DevModeClientHandler {
     @SubscribeEvent
     public static void onRegisterGuiLayers(RegisterGuiLayersEvent event) {
         event.registerAboveAll(
-                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(GatheringChunksConstants.MOD_ID, "dev_mode_hud"),
+                net.minecraft.resources.Identifier.fromNamespaceAndPath(GatheringChunksConstants.MOD_ID, "dev_mode_hud"),
                 (guiGraphics, deltaTracker) -> renderOverlay(guiGraphics));
     }
 

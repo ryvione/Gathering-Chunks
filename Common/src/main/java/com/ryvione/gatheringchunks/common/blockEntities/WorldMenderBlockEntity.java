@@ -16,6 +16,9 @@ import com.ryvione.gatheringchunks.config.ChunkByChunkConfig;
 import com.ryvione.gatheringchunks.interop.Services;
 import com.ryvione.gatheringchunks.server.world.ChunkSpawnController;
 import com.ryvione.gatheringchunks.server.world.SpawnChunkHelper;
+import net.minecraft.world.entity.player.StackedItemContents;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -97,7 +100,7 @@ public class WorldMenderBlockEntity extends BaseContainerBlockEntity implements 
                 ChunkPos chunkPos = new ChunkPos(spiralIterator.getX(), spiralIterator.getY());
                 if (SpawnChunkHelper.isEmptyChunk(level, chunkPos)) {
                     entity.chunksSpawned = chunksSpawned + 1;
-                    BlockPos pos = chunkPos.getMiddleBlockPosition(level.getMaxBuildHeight() - 1);
+                    BlockPos pos = chunkPos.getMiddleBlockPosition(level.getMaxY());
                     SpawnChunkBlock spawnChunkBlock = entity.getInputChunkBlock();
                     if (spawnChunkBlock != null && ChunkSpawnController.get(serverLevel.getServer()).request(serverLevel, spawnChunkBlock.getBiomeTheme(), spawnChunkBlock.isRandom(), pos)) {
                         entity.getItem(SLOT_INPUT).shrink(1);
@@ -208,7 +211,7 @@ public class WorldMenderBlockEntity extends BaseContainerBlockEntity implements 
     }
 
     @Override
-    public void fillStackedContents(StackedContents contents) {
+    public void fillStackedContents(StackedItemContents contents) {
         for (ItemStack itemstack : items) {
             contents.accountStack(itemstack);
         }
@@ -234,20 +237,29 @@ public class WorldMenderBlockEntity extends BaseContainerBlockEntity implements 
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider provider) {
-        super.loadAdditional(tag, provider);
-        this.cooldown = tag.getInt("Cooldown");
-        this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
-        this.chunksSpawned = tag.getInt("ChunksSpawned");
-        ContainerHelper.loadAllItems(tag, this.items, provider);
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (this.level != null) {
+            net.minecraft.world.Containers.dropContents(this.level, pos, this);
+            this.level.updateNeighbourForOutputSignal(pos, state.getBlock());
+        }
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider provider) {
-        super.saveAdditional(tag, provider);
-        ContainerHelper.saveAllItems(tag, this.items, provider);
-        tag.putInt("Cooldown", cooldown);
-        tag.putInt("ChunksSpawned", chunksSpawned);
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        this.cooldown = input.getIntOr("Cooldown", 0);
+        this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
+        this.chunksSpawned = input.getIntOr("ChunksSpawned", 0);
+        ContainerHelper.loadAllItems(input, this.items);
+    }
+
+    @Override
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        ContainerHelper.saveAllItems(output, this.items);
+        output.putInt("Cooldown", cooldown);
+        output.putInt("ChunksSpawned", chunksSpawned);
     }
 
     @Override

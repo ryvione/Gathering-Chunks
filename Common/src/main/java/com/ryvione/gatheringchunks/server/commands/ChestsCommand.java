@@ -28,7 +28,7 @@ import java.util.Set;
 public class ChestsCommand {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("chests")
-                .requires(source -> source.hasPermission(0))
+                .requires(Commands.hasPermission(Commands.LEVEL_ALL))
                 .executes(ChestsCommand::listChests)
                 .then(Commands.literal("tracker")
                         .then(Commands.literal("enable")
@@ -79,11 +79,11 @@ public class ChestsCommand {
         }
 
         if (validChests.isEmpty()) {
-            source.sendSuccess(() -> Component.literal("§eNo chests found in " + level.dimension().location()), false);
+            source.sendSuccess(() -> Component.literal("§eNo chests found in " + level.dimension().identifier()), false);
             return 0;
         }
 
-        source.sendSuccess(() -> Component.literal("§6Available chests in " + level.dimension().location() + " §7(" + validChests.size() + ")§r:"), false);
+        source.sendSuccess(() -> Component.literal("§6Available chests in " + level.dimension().identifier() + " §7(" + validChests.size() + ")§r:"), false);
 
         for (BlockPos pos : validChests) {
             final BlockPos finalPos = pos;

@@ -1,26 +1,18 @@
 {
-  "type" : "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shaped",
   "pattern": [
     "sCs",
     "CXC",
     "iCi"
   ],
-  "key" : {
-    "s" : {
-      "item": "minecraft:spruce_sapling"
-    },
-    "i" : {
-      "item": "minecraft:snowball"
-    },
-    "C" : {
-      "item": "minecraft:copper_ingot"
-    },
-    "X" : {
-      "item": "gatheringchunks:worldcore"
-    }
+  "key": {
+    "s": "minecraft:spruce_sapling",
+    "i": "minecraft:snowball",
+    "C": "minecraft:copper_ingot",
+    "X": "gatheringchunks:worldcore"
   },
-  "result" : {
-    "id" : "gatheringchunks:taigachunkspawner",
-    "count" : 1
+  "result": {
+    "id": "gatheringchunks:taigachunkspawner",
+    "count": 1
   }
 }

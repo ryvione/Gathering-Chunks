@@ -94,7 +94,7 @@ public class ChunkEraserBlock extends Block {
 
         com.ryvione.gatheringchunks.server.world.ChunkSpawnController controller = com.ryvione.gatheringchunks.server.world.ChunkSpawnController
                 .get(level.getServer());
-        String dimensionId = level.dimension().location().toString();
+        String dimensionId = level.dimension().identifier().toString();
         controller.decreaseSpawnedChunkCount(dimensionId);
 
         giveRewards(level, eraserPos, player);
@@ -106,7 +106,7 @@ public class ChunkEraserBlock extends Block {
     public static void eraseChunkDirectly(ServerLevel level, ChunkPos chunkPos) {
         BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
 
-        for (int y = level.getMinBuildHeight(); y <= level.getMaxBuildHeight(); y++) {
+        for (int y = level.getMinY(); y <= level.getMaxY() + 1; y++) {
             for (int z = chunkPos.getMinBlockZ(); z <= chunkPos.getMaxBlockZ(); z++) {
                 for (int x = chunkPos.getMinBlockX(); x <= chunkPos.getMaxBlockX(); x++) {
                     mutablePos.set(x, y, z);

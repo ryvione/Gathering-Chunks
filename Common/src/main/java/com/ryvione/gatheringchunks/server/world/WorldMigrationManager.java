@@ -10,6 +10,7 @@
 package com.ryvione.gatheringchunks.server.world;
 
 import com.ryvione.gatheringchunks.common.GatheringChunksConstants;
+import com.ryvione.gatheringchunks.util.SavedDataCompat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
@@ -32,22 +33,21 @@ public class WorldMigrationManager extends SavedData {
     private int savedVersion = 0;
 
     public static WorldMigrationManager get(MinecraftServer server) {
-        return server.getLevel(Level.OVERWORLD).getChunkSource().getDataStorage().computeIfAbsent(
-                new SavedData.Factory<>(
-                        WorldMigrationManager::new,
-                        (tag, provider) -> WorldMigrationManager.load(tag),
-                        net.minecraft.util.datafix.DataFixTypes.LEVEL),
-                "gcmigration");
+        return server.getLevel(Level.OVERWORLD).getChunkSource().getDataStorage().computeIfAbsent(SavedDataCompat.of(
+                "gcmigration",
+                WorldMigrationManager::new,
+                WorldMigrationManager::load,
+                migration -> migration.save(new CompoundTag())
+        ));
     }
 
     private static WorldMigrationManager load(CompoundTag tag) {
         WorldMigrationManager mgr = new WorldMigrationManager();
-        mgr.savedVersion = tag.getInt("version");
+        mgr.savedVersion = tag.getIntOr("version", 0);
         return mgr;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
+    public CompoundTag save(CompoundTag tag) {
         tag.putInt("version", CURRENT_VERSION);
         return tag;
     }
@@ -61,7 +61,7 @@ public class WorldMigrationManager extends SavedData {
             ChunkSpawnController controller = ChunkSpawnController.get(server);
             int totalSpawnedAcrossDims = 0;
             for (ServerLevel level : server.getAllLevels()) {
-                totalSpawnedAcrossDims += controller.getSpawnedChunkCount(level.dimension().location().toString());
+                totalSpawnedAcrossDims += controller.getSpawnedChunkCount(level.dimension().identifier().toString());
             }
             
             if (totalSpawnedAcrossDims == 0) {
@@ -91,7 +91,7 @@ public class WorldMigrationManager extends SavedData {
         if (success) {
             savedVersion = CURRENT_VERSION;
             setDirty();
-            server.getLevel(Level.OVERWORLD).getChunkSource().getDataStorage().save();
+            server.getLevel(Level.OVERWORLD).getChunkSource().getDataStorage().saveAndJoin();
             GatheringChunksConstants.LOGGER.info("[Migration] All migrations complete and saved.");
         } else {
             GatheringChunksConstants.LOGGER.error("[Migration] Migration failed. World may be in an inconsistent state.");
@@ -106,10 +106,10 @@ public class WorldMigrationManager extends SavedData {
         for (ServerLevel level : server.getAllLevels()) {
             if (!(level.getChunkSource().getGenerator() instanceof SkyChunkGenerator generator)) continue;
             
-            String dimId = level.dimension().location().toString();
+            String dimId = level.dimension().identifier().toString();
             int actualCount = 0;
             int radius = 12;
-            ChunkPos spawnChunk = new ChunkPos(level.getSharedSpawnPos());
+            ChunkPos spawnChunk = new ChunkPos(level.getRespawnData().pos());
             
             for (int x = -radius; x <= radius; x++) {
                 for (int z = -radius; z <= radius; z++) {
@@ -147,7 +147,7 @@ public class WorldMigrationManager extends SavedData {
         }
 
         ChunkSpawnController controller = ChunkSpawnController.get(server);
-        String netherDim = Level.NETHER.location().toString();
+        String netherDim = Level.NETHER.identifier().toString();
         int spawnedCount = controller.getSpawnedChunkCount(netherDim);
 
         if (spawnedCount == 0) {
@@ -156,7 +156,7 @@ public class WorldMigrationManager extends SavedData {
         }
 
         int fixedChunks = 0;
-        BlockPos origin = nether.getSharedSpawnPos();
+        BlockPos origin = nether.getRespawnData().pos();
         int searchRadius = 32;
 
         for (int cx = -searchRadius; cx <= searchRadius; cx++) {
@@ -179,7 +179,7 @@ public class WorldMigrationManager extends SavedData {
         int[] heightsToFix = {127, 255};
         
         for (int checkY : heightsToFix) {
-            if (checkY >= nether.getMaxBuildHeight()) continue;
+            if (checkY >= nether.getMaxY() + 1) continue;
             
             for (int x = chunkPos.getMinBlockX(); x <= chunkPos.getMaxBlockX(); x++) {
                 for (int z = chunkPos.getMinBlockZ(); z <= chunkPos.getMaxBlockZ(); z++) {
@@ -208,8 +208,8 @@ public class WorldMigrationManager extends SavedData {
         ServerLevel overworld = server.getLevel(Level.OVERWORLD);
         if (overworld == null) return;
 
-        String overworldDim = Level.OVERWORLD.location().toString();
-        ChunkPos spawnChunk = new ChunkPos(overworld.getSharedSpawnPos());
+        String overworldDim = Level.OVERWORLD.identifier().toString();
+        ChunkPos spawnChunk = new ChunkPos(overworld.getRespawnData().pos());
         GatheringChunksConstants.LOGGER.info("[Migration v2] Spawn chunk is at {}", spawnChunk);
     }
 
@@ -219,7 +219,7 @@ public class WorldMigrationManager extends SavedData {
         if (overworld == null) return;
         if (!(overworld.getChunkSource().getGenerator() instanceof SkyChunkGenerator)) return;
 
-        BlockPos spawnPos = overworld.getSharedSpawnPos();
+        BlockPos spawnPos = overworld.getRespawnData().pos();
         ChunkPos spawnChunk = new ChunkPos(spawnPos);
 
         if (SpawnChunkHelper.isEmptyChunk(overworld, spawnChunk)) {
@@ -230,13 +230,13 @@ public class WorldMigrationManager extends SavedData {
                     if (!SpawnChunkHelper.isEmptyChunk(overworld, candidate)) {
                         net.minecraft.world.level.chunk.LevelChunk levelChunk =
                                 overworld.getChunkSource().getChunkNow(candidate.x, candidate.z);
-                        int safeY = overworld.getMaxBuildHeight() / 2;
+                        int safeY = (overworld.getMaxY() + 1) / 2;
                         if (levelChunk != null) {
                             safeY = com.ryvione.gatheringchunks.common.util.ChunkUtil.getSafeSpawnHeight(
                                     levelChunk, candidate.getMiddleBlockX(), candidate.getMiddleBlockZ());
                         }
                         BlockPos newSpawn = new BlockPos(candidate.getMiddleBlockX(), safeY, candidate.getMiddleBlockZ());
-                        ((ServerLevelData) overworld.getLevelData()).setSpawn(newSpawn, 0);
+                        SpawnChunkHelper.setLevelSpawn((ServerLevelData) overworld.getLevelData(), newSpawn);
                         GatheringChunksConstants.LOGGER.info(
                                 "[Migration v3] Moved spawn from {} to populated chunk at {}", spawnPos, newSpawn);
                         return;
@@ -256,7 +256,7 @@ public class WorldMigrationManager extends SavedData {
         if (overworld == null) return;
         if (!(overworld.getChunkSource().getGenerator() instanceof SkyChunkGenerator)) return;
 
-        BlockPos spawnPos = overworld.getSharedSpawnPos();
+        BlockPos spawnPos = overworld.getRespawnData().pos();
         ChunkPos spawnChunk = new ChunkPos(spawnPos);
 
         if (SpawnChunkHelper.isEmptyChunk(overworld, spawnChunk)) {
@@ -272,7 +272,7 @@ public class WorldMigrationManager extends SavedData {
 
         if (safeY != spawnPos.getY()) {
             BlockPos newSpawn = new BlockPos(spawnPos.getX(), safeY, spawnPos.getZ());
-            ((ServerLevelData) overworld.getLevelData()).setSpawn(newSpawn, 0);
+            SpawnChunkHelper.setLevelSpawn((ServerLevelData) overworld.getLevelData(), newSpawn);
             GatheringChunksConstants.LOGGER.info(
                     "[Migration v4] Fixed spawn height from y={} to y={}", spawnPos.getY(), safeY);
         } else {

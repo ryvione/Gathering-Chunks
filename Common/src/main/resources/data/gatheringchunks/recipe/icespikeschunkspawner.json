@@ -1,23 +1,17 @@
 {
-  "type" : "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shaped",
   "pattern": [
     "iCi",
     "CXC",
     "iCi"
   ],
-  "key" : {
-    "i" : {
-      "item": "minecraft:packed_ice"
-    },
-    "C" : {
-      "item": "minecraft:copper_ingot"
-    },
-    "X" : {
-      "item": "gatheringchunks:worldcore"
-    }
+  "key": {
+    "i": "minecraft:packed_ice",
+    "C": "minecraft:copper_ingot",
+    "X": "gatheringchunks:worldcore"
   },
-  "result" : {
-    "id" : "gatheringchunks:icespikeschunkspawner",
-    "count" : 1
+  "result": {
+    "id": "gatheringchunks:icespikeschunkspawner",
+    "count": 1
   }
 }

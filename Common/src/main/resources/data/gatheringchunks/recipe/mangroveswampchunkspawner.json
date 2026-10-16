@@ -1,26 +1,18 @@
 {
-  "type" : "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shaped",
   "pattern": [
     "pCp",
     "CXC",
     "mCm"
   ],
-  "key" : {
-    "p" : {
-      "item": "minecraft:mangrove_propagule"
-    },
-    "m" : {
-      "item": "minecraft:mud"
-    },
-    "C" : {
-      "item": "minecraft:copper_ingot"
-    },
-    "X" : {
-      "item": "gatheringchunks:worldcore"
-    }
+  "key": {
+    "p": "minecraft:mangrove_propagule",
+    "m": "minecraft:mud",
+    "C": "minecraft:copper_ingot",
+    "X": "gatheringchunks:worldcore"
   },
-  "result" : {
-    "id" : "gatheringchunks:mangroveswampchunkspawner",
-    "count" : 1
+  "result": {
+    "id": "gatheringchunks:mangroveswampchunkspawner",
+    "count": 1
   }
 }

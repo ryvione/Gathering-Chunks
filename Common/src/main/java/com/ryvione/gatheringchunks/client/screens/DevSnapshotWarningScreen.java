@@ -11,7 +11,7 @@ package com.ryvione.gatheringchunks.client.screens;
 
 import com.ryvione.gatheringchunks.client.DevSnapshotWarning;
 import net.minecraft.ChatFormatting;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Checkbox;

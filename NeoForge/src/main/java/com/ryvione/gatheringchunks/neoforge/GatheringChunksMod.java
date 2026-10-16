@@ -1,3 +1,13 @@
+/*
+ * Original work Copyright (c) immortius
+ * Modified work Copyright (c) 2026 Ryvione
+ *
+ * This file is part of Gathering Chunks (Ryvione's Fork).
+ * Original: https://github.com/immortius/chunkbychunk
+ *
+ * Licensed under the MIT License. See LICENSE file in the project root for details.
+ */
+
 package com.ryvione.gatheringchunks.neoforge;
 
 import com.ryvione.gatheringchunks.common.GatheringChunksConstants;
@@ -58,10 +68,11 @@ public class GatheringChunksMod {
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::registerPayloads);
 
-        if (net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) {
+        if (net.neoforged.fml.loading.FMLEnvironment.getDist().isClient()) {
             modEventBus.addListener(ClientModEvents::onClientSetup);
             modEventBus.addListener(ClientModEvents::registerScreens);
             net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(ClientGameEvents::onClientJoin);
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(ClientGameEvents::onClientLogout);
             net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(ClientGameEvents::onClientTick);
         }
     }
@@ -73,7 +84,7 @@ public class GatheringChunksMod {
     private void registerPayloads(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(GatheringChunksConstants.MOD_ID).versioned("1.0");
         
-        if (net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) {
+        if (net.neoforged.fml.loading.FMLEnvironment.getDist().isClient()) {
             ClientPayloadRegistration.register(registrar);
         } else {
             registrar.playToClient(S2COpenConfigPacket.TYPE, S2COpenConfigPacket.CODEC, (p, c) -> {});
@@ -117,6 +128,10 @@ public class GatheringChunksMod {
             } catch (Exception ignored) {}
             com.ryvione.gatheringchunks.client.ClientConfigStorage.setCurrentServer(com.ryvione.gatheringchunks.client.ClientConfigStorage.getServerIdFromConnection(address));
             LOGGER.info("[GatheringChunksMod] Joined server, set config scope: {}", address);
+        }
+
+        public static void onClientLogout(ClientPlayerNetworkEvent.LoggingOut event) {
+            com.ryvione.gatheringchunks.client.ClientConfigStorage.endServerSession();
         }
 
         public static void onClientTick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {

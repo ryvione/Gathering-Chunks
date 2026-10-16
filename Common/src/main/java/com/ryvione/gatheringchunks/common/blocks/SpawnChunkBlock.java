@@ -1,3 +1,13 @@
+/*
+ * Original work Copyright (c) immortius
+ * Modified work Copyright (c) 2026 Ryvione
+ *
+ * This file is part of Gathering Chunks (Ryvione's Fork).
+ * Original: https://github.com/immortius/chunkbychunk
+ *
+ * Licensed under the MIT License. See LICENSE file in the project root for details.
+ */
+
 package com.ryvione.gatheringchunks.common.blocks;
 
 import com.ryvione.gatheringchunks.common.GatheringChunksConstants;
@@ -68,12 +78,8 @@ public class SpawnChunkBlock extends Block {
         ChunkSpawnerMode mode = ChunkByChunkConfig.get().getGeneration().getChunkSpawnerMode();
         ChunkPos ownChunk = new ChunkPos(pos);
 
-        ChunkPos originChunk = chunkSpawnController.getOriginChunk(serverLevel.dimension().location().toString());
-        if (originChunk != null && originChunk.equals(ownChunk)) {
-            serverPlayer.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                    "§c[ChunkByChunk] §eThis chunk holds this dimension's origin data and can't be spawned into."));
-            return InteractionResult.CONSUME;
-        }
+        ChunkPos originChunk = chunkSpawnController.getOriginChunk(serverLevel.dimension().identifier().toString());
+        boolean ownChunkIsOrigin = originChunk != null && originChunk.equals(ownChunk);
 
         boolean ownChunkEmpty = SpawnChunkHelper.isEmptyChunk(serverLevel, ownChunk);
         boolean ownChunkDeletedButMarked = false;
@@ -112,9 +118,20 @@ public class SpawnChunkBlock extends Block {
                 }
             }
 
+            boolean trace = com.ryvione.gatheringchunks.server.DevMode.isEnabled();
+            if (trace) {
+                GatheringChunksConstants.LOGGER.info("[Spawner] clicked block {} (face {}) in chunk {}, mode {}, neighbours in the order they are tried: {}",
+                        pos, hit.getDirection(), ownChunk, mode, adjacentChunks);
+            }
             for (ChunkPos targetChunkPos : adjacentChunks) {
-                if (!serverLevel.hasChunk(targetChunkPos.x, targetChunkPos.z)) continue;
-                if (originChunk != null && originChunk.equals(targetChunkPos)) continue;
+                if (!serverLevel.hasChunk(targetChunkPos.x, targetChunkPos.z)) {
+                    if (trace) GatheringChunksConstants.LOGGER.info("[Spawner]   {} skipped: chunk is not loaded", targetChunkPos);
+                    continue;
+                }
+                if (originChunk != null && originChunk.equals(targetChunkPos)) {
+                    if (trace) GatheringChunksConstants.LOGGER.info("[Spawner]   {} skipped: it is the origin chunk", targetChunkPos);
+                    continue;
+                }
                 
                 boolean targetEmpty = SpawnChunkHelper.isEmptyChunk(level, targetChunkPos);
                 if (serverLevel.getChunkSource().getGenerator() instanceof SkyChunkGenerator generator) {
@@ -126,11 +143,26 @@ public class SpawnChunkBlock extends Block {
                     }
                 }
                 
-                if (!targetEmpty) continue;
+                if (!targetEmpty) {
+                    if (trace) GatheringChunksConstants.LOGGER.info("[Spawner]   {} skipped: not empty", targetChunkPos);
+                    continue;
+                }
 
                 BlockPos requestPos = targetChunkPos.getMiddleBlockPosition(pos.getY());
                 if (chunkSpawnController.request(serverLevel, effectiveBiomeTheme, effectiveRandom,
                         requestPos, false, false, serverPlayer.getUUID())) {
+                    level.playSound(null, pos, Services.PLATFORM.spawnChunkSoundEffect(), SoundSource.BLOCKS, 1.0f, 1.0f);
+                    if (trace) GatheringChunksConstants.LOGGER.info("[Spawner]   {} chosen", targetChunkPos);
+                    level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                    return InteractionResult.SUCCESS;
+                }
+                if (trace) GatheringChunksConstants.LOGGER.info("[Spawner]   {} skipped: the spawn request was refused", targetChunkPos);
+            }
+        }
+
+        if (mode == ChunkSpawnerMode.Void || mode == ChunkSpawnerMode.Both) {
+            if (ownChunkEmpty && !ownChunkIsOrigin) {
+                if (chunkSpawnController.request(serverLevel, effectiveBiomeTheme, effectiveRandom, pos, false, false, serverPlayer.getUUID())) {
                     level.playSound(null, pos, Services.PLATFORM.spawnChunkSoundEffect(), SoundSource.BLOCKS, 1.0f, 1.0f);
                     level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
                     return InteractionResult.SUCCESS;
@@ -138,14 +170,13 @@ public class SpawnChunkBlock extends Block {
             }
         }
 
-        if (mode == ChunkSpawnerMode.Void || mode == ChunkSpawnerMode.Both) {
-            if (ownChunkEmpty) {
-                if (chunkSpawnController.request(serverLevel, effectiveBiomeTheme, effectiveRandom, pos, false, false, serverPlayer.getUUID())) {
-                    level.playSound(null, pos, Services.PLATFORM.spawnChunkSoundEffect(), SoundSource.BLOCKS, 1.0f, 1.0f);
-                    level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
-                    return InteractionResult.SUCCESS;
-                }
-            }
+        if (ownChunkIsOrigin) {
+            boolean triedNeighbours = mode == ChunkSpawnerMode.Edge || mode == ChunkSpawnerMode.Both;
+            serverPlayer.sendSystemMessage(triedNeighbours
+                    ? net.minecraft.network.chat.Component.translatable("gatheringchunks.message.no_empty_adjacent_chunks")
+                    : net.minecraft.network.chat.Component.literal(
+                            "§c[ChunkByChunk] §eThis chunk holds this dimension's origin data and can't be spawned into."));
+            return InteractionResult.CONSUME;
         }
 
         if (ownChunkDeletedButMarked) {
@@ -201,8 +232,8 @@ public class SpawnChunkBlock extends Block {
                     currentChunk.z + dir.getStepZ());
 
             if (!SpawnChunkHelper.isEmptyChunk(level, adjacentChunk)) {
-                BlockPos centerPos = adjacentChunk.getMiddleBlockPosition(level.getMaxBuildHeight() - 10);
-                for (int y = level.getMaxBuildHeight() - 10; y >= level.getMinBuildHeight(); y--) {
+                BlockPos centerPos = adjacentChunk.getMiddleBlockPosition(level.getMaxY() - 9);
+                for (int y = level.getMaxY() - 9; y >= level.getMinY(); y--) {
                     BlockPos checkPos = new BlockPos(centerPos.getX(), y, centerPos.getZ());
                     Block block = level.getBlockState(checkPos).getBlock();
 

@@ -9,6 +9,7 @@
  */
 package com.ryvione.gatheringchunks.common;
 
+import com.ryvione.gatheringchunks.server.world.ControllableChunkMap;
 import com.ryvione.gatheringchunks.server.world.SkyChunkGenerator;
 import com.ryvione.gatheringchunks.server.world.SpawnChunkHelper;
 import net.minecraft.core.BlockPos;
@@ -22,7 +23,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LayeredCauldronBlock;
 import net.minecraft.world.level.chunk.LevelChunk;
 
-import java.lang.reflect.Method;
 import java.util.Random;
 
 public class CauldronRainFiller {
@@ -30,52 +30,34 @@ public class CauldronRainFiller {
     private static final Random RANDOM = new Random();
     private static final float FILL_CHANCE = 0.05f;
 
-    private static Method getChunksMethod;
-    static {
-        Method found = null;
-        for (Method m : ChunkMap.class.getDeclaredMethods()) {
-            if (m.getParameterCount() == 0 && Iterable.class.isAssignableFrom(m.getReturnType())) {
-                m.setAccessible(true);
-                found = m;
-                break;
-            }
-        }
-        if (found == null) {
-            throw new RuntimeException("Failed to find getChunks() method in ChunkMap");
-        }
-        getChunksMethod = found;
-    }
-
     @SuppressWarnings("unchecked")
     public static void tick(ServerLevel level) {
         if (!(level.getChunkSource().getGenerator() instanceof SkyChunkGenerator)) return;
         if (!level.isRaining()) return;
 
         ChunkMap chunkMap = level.getChunkSource().chunkMap;
-        Iterable<ChunkHolder> chunks;
-        try {
-            chunks = (Iterable<ChunkHolder>) getChunksMethod.invoke(chunkMap);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return;
-        }
+        Iterable<ChunkHolder> chunks = ((ControllableChunkMap) chunkMap).getVisibleChunkHolders();
 
         for (ChunkHolder holder : chunks) {
+            if (RANDOM.nextFloat() > FILL_CHANCE * 16) continue;
+
             LevelChunk levelChunk = holder.getChunkToSend();
             if (levelChunk == null) continue;
 
             ChunkPos chunkPos = levelChunk.getPos();
-            if (SpawnChunkHelper.isEmptyChunk(level, chunkPos)) continue;
-            if (RANDOM.nextFloat() > FILL_CHANCE * 16) continue;
+            int localX = RANDOM.nextInt(16);
+            int localZ = RANDOM.nextInt(16);
+            int x = chunkPos.getMinBlockX() + localX;
+            int z = chunkPos.getMinBlockZ() + localZ;
+            int y = levelChunk.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, localX, localZ);
+            BlockPos top = new BlockPos(x, y, z);
+            var state = levelChunk.getBlockState(top);
 
-            int x = chunkPos.getMinBlockX() + RANDOM.nextInt(16);
-            int z = chunkPos.getMinBlockZ() + RANDOM.nextInt(16);
-            int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
-            BlockPos top = new BlockPos(x, y - 1, z);
-            var state = level.getBlockState(top);
+            if (!state.is(Blocks.CAULDRON) && !state.is(Blocks.WATER_CAULDRON) && !state.is(Blocks.POWDER_SNOW_CAULDRON)) continue;
+            if (SpawnChunkHelper.isEmptyChunk(level, chunkPos)) continue;
 
             Holder<Biome> biomeHolder = level.getBiome(top);
-            boolean isColdBiome = biomeHolder.value().coldEnoughToSnow(top);
+            boolean isColdBiome = biomeHolder.value().coldEnoughToSnow(top, level.getSeaLevel());
 
             if (state.is(Blocks.CAULDRON)) {
                 if (isColdBiome) {

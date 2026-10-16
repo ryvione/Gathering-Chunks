@@ -77,19 +77,19 @@ public class GatheringChunksCommand {
                                 .executes(GatheringChunksCommand::showSpecificHelp)))
 
                 .then(Commands.literal("spawnChunk")
-                        .requires(x -> x.hasPermission(2))
+                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(Commands.argument("location", Vec3Argument.vec3())
                                 .executes((cmd) -> spawnChunk(cmd.getSource(), cmd.getSource().getLevel(),
                                         Vec3Argument.getCoordinates(cmd, "location"), false))))
 
                 .then(Commands.literal("spawnRandomChunk")
-                        .requires(x -> x.hasPermission(2))
+                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(Commands.argument("location", Vec3Argument.vec3())
                                 .executes((cmd) -> spawnChunk(cmd.getSource(), cmd.getSource().getLevel(),
                                         Vec3Argument.getCoordinates(cmd, "location"), true))))
 
                 .then(Commands.literal("spawnThemedChunk")
-                        .requires(x -> x.hasPermission(2))
+                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(Commands.argument("theme", StringArgumentType.word())
                                 .suggests(new BiomeThemeSuggestionProvider())
                                 .then(Commands.argument("location", Vec3Argument.vec3())
@@ -98,7 +98,7 @@ public class GatheringChunksCommand {
                                                 Vec3Argument.getCoordinates(cmd, "location"))))))
 
                 .then(Commands.literal("config")
-                        .requires(x -> x.hasPermission(2))
+                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(Commands.literal("reload")
                                 .executes(GatheringChunksCommand::reloadConfig))
                         .then(Commands.literal("modify")
@@ -112,12 +112,12 @@ public class GatheringChunksCommand {
                                 .then(Commands.argument("search", StringArgumentType.word())
                                         .executes(GatheringChunksCommand::listConfigFields))))
                 .then(Commands.literal("devmode")
-                        .requires(x -> x.hasPermission(2))
+                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .executes(GatheringChunksCommand::toggleDevMode)
                         .then(Commands.literal("on").executes(context -> setDevMode(context, true)))
                         .then(Commands.literal("off").executes(context -> setDevMode(context, false))))
                 .then(Commands.literal("debug")
-                        .requires(x -> x.hasPermission(2))
+                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(Commands.literal("chunk")
                                 .executes(GatheringChunksCommand::debugChunk)
                                 .then(Commands.argument("x", IntegerArgumentType.integer())
@@ -158,7 +158,7 @@ public class GatheringChunksCommand {
                 false);
         source.sendSuccess(() -> Component.literal("§e/gatheringchunks config reload §7- Reload config from disk (OP)"),
                 false);
-        source.sendSuccess(() -> Component.literal("§e/gatheringchunks config modify §7- Open config menu UI (OP)"),
+        source.sendSuccess(() -> Component.literal("§e/gatheringchunks config modify §7- Show the server settings on your screen, read-only (OP)"),
                 false);
         source.sendSuccess(() -> Component.literal("§e/gatheringchunks config list [search] §7- List config fields and current values (OP)"),
                 false);
@@ -195,7 +195,7 @@ public class GatheringChunksCommand {
     private static int spawnChunk(CommandSourceStack stack, ServerLevel level, Coordinates specifiedCoords,
                                   boolean random) throws CommandSyntaxException {
         Vec3 vec3 = specifiedCoords.getPosition(stack);
-        BlockPos pos = new BlockPos((int) vec3.x, level.getMaxBuildHeight() - 1, (int) vec3.z);
+        BlockPos pos = new BlockPos((int) vec3.x, level.getMaxY(), (int) vec3.z);
         ChunkPos chunkPos = new ChunkPos(pos);
 
         if (!(level.getChunkSource().getGenerator() instanceof SkyChunkGenerator)) {
@@ -217,7 +217,7 @@ public class GatheringChunksCommand {
     private static int spawnThemedChunk(CommandSourceStack stack, ServerLevel level, String biome,
                                         Coordinates specifiedCoords) throws CommandSyntaxException {
         Vec3 vec3 = specifiedCoords.getPosition(stack);
-        BlockPos pos = new BlockPos((int) vec3.x, level.getMaxBuildHeight() - 1, (int) vec3.z);
+        BlockPos pos = new BlockPos((int) vec3.x, level.getMaxY(), (int) vec3.z);
         ChunkPos chunkPos = new ChunkPos(pos);
 
         if (level.getChunkSource().getGenerator() instanceof SkyChunkGenerator skyChunkGenerator) {
@@ -337,15 +337,15 @@ public class GatheringChunksCommand {
         }
         net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> effectiveGenLevelKey =
                 com.ryvione.gatheringchunks.server.world.ChunkSpawnController.get(source.getServer())
-                        .getEffectiveGenerationLevel(visibleLevel.dimension().location().toString(), skyGen.getGenerationLevel());
+                        .getEffectiveGenerationLevel(visibleLevel.dimension().identifier().toString(), skyGen.getGenerationLevel());
         net.minecraft.server.level.ServerLevel genLevel = source.getServer().getLevel(effectiveGenLevelKey);
         if (genLevel == null) {
-            source.sendFailure(Component.literal("§cGeneration dimension " + effectiveGenLevelKey.location() + " isn't loaded"));
+            source.sendFailure(Component.literal("§cGeneration dimension " + effectiveGenLevelKey.identifier() + " isn't loaded"));
             return 0;
         }
         if (!effectiveGenLevelKey.equals(skyGen.getGenerationLevel())) {
-            source.sendSuccess(() -> Component.literal("§7(Using origin-locked generation dimension " + effectiveGenLevelKey.location()
-                    + " instead of this generator's default " + skyGen.getGenerationLevel().location() + ")"), false);
+            source.sendSuccess(() -> Component.literal("§7(Using origin-locked generation dimension " + effectiveGenLevelKey.identifier()
+                    + " instead of this generator's default " + skyGen.getGenerationLevel().identifier() + ")"), false);
         }
 
         net.minecraft.world.level.chunk.ChunkAccess visibleChunk =
@@ -355,8 +355,8 @@ public class GatheringChunksCommand {
 
         final ChunkPos finalChunkPos = chunkPos;
         source.sendSuccess(() -> Component.literal("§6===== Chunk debug: " + finalChunkPos + " ====="), false);
-        source.sendSuccess(() -> Component.literal("§7Visible: " + visibleLevel.dimension().location()
-                + "  Generation: " + genLevel.dimension().location()), false);
+        source.sendSuccess(() -> Component.literal("§7Visible: " + visibleLevel.dimension().identifier()
+                + "  Generation: " + genLevel.dimension().identifier()), false);
 
         int centerX = chunkPos.getMinBlockX() >> 2;
         int centerZ = chunkPos.getMinBlockZ() >> 2;
@@ -407,8 +407,8 @@ public class GatheringChunksCommand {
 
     private static int countBoundaryBarriers(net.minecraft.server.level.ServerLevel level, ChunkPos chunkPos) {
         int count = 0;
-        int minY = level.getMinBuildHeight();
-        int maxY = level.getMaxBuildHeight();
+        int minY = level.getMinY();
+        int maxY = level.getMaxY() + 1;
         int minX = chunkPos.getMinBlockX();
         int maxX = chunkPos.getMaxBlockX();
         int minZ = chunkPos.getMinBlockZ();
@@ -442,7 +442,7 @@ public class GatheringChunksCommand {
 
     private static String describeBiomeHolder(net.minecraft.core.Holder<net.minecraft.world.level.biome.Biome> biome) {
         if (biome == null) return "?";
-        return biome.unwrapKey().map(k -> k.location().toString()).orElse(biome.toString());
+        return biome.unwrapKey().map(k -> k.identifier().toString()).orElse(biome.toString());
     }
 
     private record FoundField(FieldMetadata<?> field, Object owner) {
@@ -501,6 +501,7 @@ public class GatheringChunksCommand {
         }
 
         ConfigUtil.saveDefaultConfig(source.getServer());
+        ConfigUtil.writeActiveWorldSettings(source.getServer());
         LOGGER.info("[Command] {} set config field '{}' to '{}'", source.getTextName(), fieldName, value);
         source.sendSuccess(() -> Component.literal(
                 "§a[Gathering Chunks] Set '" + fieldName + "' to '" + found.field().serializeValue(found.owner()) + "' and saved to disk."), true);
@@ -541,7 +542,7 @@ public class GatheringChunksCommand {
 
     private static void syncConfigToAllClients(net.minecraft.server.MinecraftServer server) throws Exception {
         try {
-            String configJson = GSON.toJson(ChunkByChunkConfig.get().getGatheringChunksConfig());
+            String configJson = GSON.toJson(ChunkByChunkConfig.get());
             if (configJson == null || configJson.isEmpty()) {
                 throw new RuntimeException("Failed to serialize config to JSON");
             }

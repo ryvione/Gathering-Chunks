@@ -1,23 +1,17 @@
 {
-  "type" : "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shaped",
   "pattern": [
     "sCs",
     "CXC",
     "sCs"
   ],
-  "key" : {
-    "s": {
-      "tag": "minecraft:saplings"
-    },
-    "C" : {
-      "item": "minecraft:copper_ingot"
-    },
-    "X" : {
-      "item": "gatheringchunks:worldcore"
-    }
+  "key": {
+    "s": "#minecraft:saplings",
+    "C": "minecraft:copper_ingot",
+    "X": "gatheringchunks:worldcore"
   },
-  "result" : {
-    "id" : "gatheringchunks:junglechunkspawner",
-    "count" : 1
+  "result": {
+    "id": "gatheringchunks:junglechunkspawner",
+    "count": 1
   }
 }

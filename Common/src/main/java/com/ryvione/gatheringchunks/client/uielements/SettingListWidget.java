@@ -14,6 +14,9 @@ import com.ryvione.gatheringchunks.common.GatheringChunksConstants;
 import com.ryvione.gatheringchunks.config.ChunkByChunkConfig;
 import com.ryvione.gatheringchunks.config.system.*;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.ContainerObjectSelectionList;
@@ -75,7 +78,7 @@ public class SettingListWidget extends ContainerObjectSelectionList<SettingListW
     public int getRowWidth() {
         return rowWidth;
     }
-    protected int getScrollbarPosition() {
+    protected int scrollBarX() {
         return this.width / 2 + getRowWidth() / 2 + 4;
     }
     public void tick() {
@@ -90,8 +93,10 @@ public class SettingListWidget extends ContainerObjectSelectionList<SettingListW
             this.displayName = displayName;
         }
         @Override
-        public void render(GuiGraphics guiGraphics, int listIndex, int top, int left, int width, int height, int mouseX, int mouseY, boolean hovered, float delta) {
-            guiGraphics.drawString(SettingListWidget.this.minecraft.font, this.displayName, left + 12, top + 8, 0xFFFFFF);        }
+        public void renderContent(GuiGraphics guiGraphics, int mouseX, int mouseY, boolean hovered, float delta) {
+            int top = getContentY();
+            int left = getContentX();
+            guiGraphics.drawString(SettingListWidget.this.minecraft.font, this.displayName, left + 12, top + 8, 0xFFFFFFFF);        }
         @Override
         public List<? extends NarratableEntry> narratables() {
             return Collections.emptyList();
@@ -134,25 +139,27 @@ public class SettingListWidget extends ContainerObjectSelectionList<SettingListW
             widget.setValue(defaultValue);
         }
         @Override
-        public boolean mouseClicked(double x, double y, int mouseButton) {
-            if (super.mouseClicked(x, y, mouseButton)) {
+        public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+            if (super.mouseClicked(event, doubleClick)) {
                 lastFocused = widget;
                 return true;
             }
             return false;
         }
         @Override
-        public void render(GuiGraphics guiGraphics, int listIndex, int top, int left, int width, int height, int mouseX, int mouseY, boolean hovered, float delta) {
+        public void renderContent(GuiGraphics guiGraphics, int mouseX, int mouseY, boolean hovered, float delta) {
+            int top = getContentY();
+            int left = getContentX();
             int labelLength = SettingListWidget.this.minecraft.font.width(this.displayName);
-            guiGraphics.drawString(SettingListWidget.this.minecraft.font, this.displayName, left, top + 6, 0xFFFFFF);
+            guiGraphics.drawString(SettingListWidget.this.minecraft.font, this.displayName, left, top + 6, 0xFFFFFFFF);
             widget.setX(left + labelLength + 6);
             widget.setWidth(getRowWidth() - labelLength - 6);
             widget.setY(top);
             widget.render(guiGraphics, mouseX, mouseY, delta);
         }
         @Override
-        public boolean charTyped(char p_94683_, int p_94684_) {
-            return widget.charTyped(p_94683_, p_94684_);
+        public boolean charTyped(CharacterEvent event) {
+            return widget.charTyped(event);
         }
         @Override
         public void tick() {
@@ -162,9 +169,8 @@ public class SettingListWidget extends ContainerObjectSelectionList<SettingListW
         private final Boolean defaultValue;
         private final Consumer<Boolean> setter;
         public BooleanEntry(Component displayName, Supplier<Boolean> getter, Consumer<Boolean> setter, Boolean defaultValue) {
-            super(new CycleButton.Builder<Boolean>((x) -> Component.translatable((x) ? "gui.yes" : "gui.no"))
+            super(new CycleButton.Builder<Boolean>((x) -> Component.translatable((x) ? "gui.yes" : "gui.no"), getter::get)
                     .withValues(Boolean.FALSE, Boolean.TRUE)
-                    .withInitialValue(getter.get())
                     .create(0, 0, getRowWidth(), 20, displayName, (cycleButton, value) -> setter.accept(value)));
             this.defaultValue = defaultValue;
             this.setter = setter;
@@ -213,25 +219,27 @@ public class SettingListWidget extends ContainerObjectSelectionList<SettingListW
             widget.setValue(defaultValue.toString());
         }
         @Override
-        public boolean mouseClicked(double x, double y, int mouseButton) {
-            if (super.mouseClicked(x, y, mouseButton)) {
+        public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+            if (super.mouseClicked(event, doubleClick)) {
                 lastFocused = widget;
                 return true;
             }
             return false;
         }
         @Override
-        public void render(GuiGraphics guiGraphics, int listIndex, int top, int left, int width, int height, int mouseX, int mouseY, boolean hovered, float delta) {
+        public void renderContent(GuiGraphics guiGraphics, int mouseX, int mouseY, boolean hovered, float delta) {
+            int top = getContentY();
+            int left = getContentX();
             int labelLength = SettingListWidget.this.minecraft.font.width(this.displayName);
-            guiGraphics.drawString(SettingListWidget.this.minecraft.font, this.displayName, left, top + 6, 0xFFFFFF);
+            guiGraphics.drawString(SettingListWidget.this.minecraft.font, this.displayName, left, top + 6, 0xFFFFFFFF);
             widget.setX(left + labelLength + 6);
             widget.setWidth(getRowWidth() - labelLength - 6);
             widget.setY(top);
             widget.render(guiGraphics, mouseX, mouseY, delta);
         }
         @Override
-        public boolean charTyped(char p_94683_, int p_94684_) {
-            return widget.charTyped(p_94683_, p_94684_);
+        public boolean charTyped(CharacterEvent event) {
+            return widget.charTyped(event);
         }
         @Override
         public void tick() {
@@ -241,9 +249,8 @@ public class SettingListWidget extends ContainerObjectSelectionList<SettingListW
         private final Enum<?> defaultValue;
         private final Consumer<Enum<?>> setter;
         public EnumEntry(Component displayName, Class<? extends Enum<?>> type, Supplier<Enum<?>> getter, Consumer<Enum<?>> setter, Enum<?> defaultValue) {
-            super(new CycleButton.Builder<Enum<?>>((x) -> Component.translatable("enumvalue.chunkbychunk." + type.getSimpleName() + "." + x.name()))
+            super(new CycleButton.Builder<Enum<?>>((x) -> Component.translatable("enumvalue.chunkbychunk." + type.getSimpleName() + "." + x.name()), getter)
                     .withValues(type.getEnumConstants())
-                    .withInitialValue(getter.get())
                     .create(0, 0, getRowWidth(), 20, displayName, (cycleButton, value) -> setter.accept(value)));
             this.defaultValue = defaultValue;
             this.setter = setter;
@@ -261,28 +268,30 @@ public class SettingListWidget extends ContainerObjectSelectionList<SettingListW
             this.widget = widget;
         }
         @Override
-        public void render(GuiGraphics guiGraphics, int listIndex, int top, int left, int width, int height, int mouseX, int mouseY, boolean hovered, float delta) {
+        public void renderContent(GuiGraphics guiGraphics, int mouseX, int mouseY, boolean hovered, float delta) {
+            int top = getContentY();
+            int left = getContentX();
             widget.setX(left);
             widget.setY(top);
             widget.render(guiGraphics, mouseX, mouseY, delta);
         }
         @Override
-        public boolean mouseClicked(double x, double y, int mouseButton) {
+        public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
             if (SettingListWidget.this.lastFocused != null && SettingListWidget.this.lastFocused != widget) {
                 SettingListWidget.this.lastFocused.setFocused(false);
             }
             dragging = true;
-            return this.widget.mouseClicked(x, y, mouseButton);
+            return this.widget.mouseClicked(event, doubleClick);
         }
         @Override
-        public boolean mouseReleased(double x, double y, int mouseButton) {
+        public boolean mouseReleased(MouseButtonEvent event) {
             dragging = false;
-            return this.widget.mouseReleased(x, y, mouseButton);
+            return this.widget.mouseReleased(event);
         }
         @Override
-        public boolean mouseDragged(double x, double y, int mouseButton, double deltaX, double deltaY) {
+        public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
             if (dragging) {
-                return this.widget.mouseDragged(x, y, mouseButton, deltaX, deltaY);
+                return this.widget.mouseDragged(event, deltaX, deltaY);
             }
             return false;
         }
@@ -291,12 +300,12 @@ public class SettingListWidget extends ContainerObjectSelectionList<SettingListW
             return this.widget.isMouseOver(p_93537_, p_93538_);
         }
         @Override
-        public boolean keyPressed(int p_94710_, int p_94711_, int p_94712_) {
-            return this.widget.keyPressed(p_94710_, p_94711_, p_94712_);
+        public boolean keyPressed(KeyEvent event) {
+            return this.widget.keyPressed(event);
         }
         @Override
-        public boolean keyReleased(int p_94715_, int p_94716_, int p_94717_) {
-            return this.widget.keyReleased(p_94715_, p_94716_, p_94717_);
+        public boolean keyReleased(KeyEvent event) {
+            return this.widget.keyReleased(event);
         }
         @Override
         public List<? extends NarratableEntry> narratables() {

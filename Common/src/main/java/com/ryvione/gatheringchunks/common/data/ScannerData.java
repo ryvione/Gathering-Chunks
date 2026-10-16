@@ -16,7 +16,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 
@@ -32,7 +32,7 @@ public class ScannerData {
         this.inputItems.addAll(items);
         this.targetBlocks.addAll(blocks);
     }
-    public void process(ResourceLocation context, RegistryAccess registryAccess) {
+    public void process(Identifier context, RegistryAccess registryAccess) {
         Set<Item> inputItems = getInputItems(context, registryAccess);
         Set<Block> targetBlocks = getTargetBlocks(context, registryAccess);
         if (!inputItems.isEmpty() && !targetBlocks.isEmpty()) {
@@ -41,11 +41,11 @@ public class ScannerData {
             GatheringChunksConstants.LOGGER.error("Invalid scanner data '{}', missing source items or target blocks", context);
         }
     }
-    private Set<Block> getTargetBlocks(ResourceLocation context, RegistryAccess registryAccess) {
-        Registry<Block> blockRegistry = registryAccess != null ? registryAccess.registryOrThrow(Registries.BLOCK) : BuiltInRegistries.BLOCK;
+    private Set<Block> getTargetBlocks(Identifier context, RegistryAccess registryAccess) {
+        Registry<Block> blockRegistry = registryAccess != null ? registryAccess.lookupOrThrow(Registries.BLOCK) : BuiltInRegistries.BLOCK;
         return targetBlocks.stream()
                 .map(x -> {
-                    ResourceLocation loc = ResourceLocation.tryParse(x);
+                    Identifier loc = Identifier.tryParse(x);
                     if (loc == null) {
                         GatheringChunksConstants.LOGGER.warn("Invalid block location {} in scanner data {}", x, context);
                         return Optional.<Block>empty();
@@ -60,11 +60,11 @@ public class ScannerData {
                 .map(Optional::get)
                 .collect(Collectors.toSet());
     }
-    private Set<Item> getInputItems(ResourceLocation context, RegistryAccess registryAccess) {
-        Registry<Item> itemRegistry = registryAccess != null ? registryAccess.registryOrThrow(Registries.ITEM) : BuiltInRegistries.ITEM;
+    private Set<Item> getInputItems(Identifier context, RegistryAccess registryAccess) {
+        Registry<Item> itemRegistry = registryAccess != null ? registryAccess.lookupOrThrow(Registries.ITEM) : BuiltInRegistries.ITEM;
         return inputItems.stream()
                 .map(x -> {
-                    ResourceLocation loc = ResourceLocation.tryParse(x);
+                    Identifier loc = Identifier.tryParse(x);
                     if (loc == null) {
                         GatheringChunksConstants.LOGGER.warn("Invalid item location {} in scanner data {}", x, context);
                         return Optional.<Item>empty();

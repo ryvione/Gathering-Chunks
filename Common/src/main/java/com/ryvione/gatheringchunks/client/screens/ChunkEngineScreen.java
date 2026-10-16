@@ -1,18 +1,29 @@
+/*
+ * Original work Copyright (c) immortius
+ * Modified work Copyright (c) 2026 Ryvione
+ *
+ * This file is part of Gathering Chunks (Ryvione's Fork).
+ * Original: https://github.com/immortius/chunkbychunk
+ *
+ * Licensed under the MIT License. See LICENSE file in the project root for details.
+ */
+
 package com.ryvione.gatheringchunks.client.screens;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.ryvione.gatheringchunks.common.GatheringChunksConstants;
 import com.ryvione.gatheringchunks.common.blockEntities.ChunkEngineBlockEntity;
 import com.ryvione.gatheringchunks.common.menus.ChunkEngineMenu;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 
 public class ChunkEngineScreen extends AbstractContainerScreen<ChunkEngineMenu> {
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(GatheringChunksConstants.MOD_ID, "textures/gui/container/chunk_engine.png");
+    private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(GatheringChunksConstants.MOD_ID, "textures/gui/container/chunk_engine.png");
 
     private static final int FUEL_BAR_X = 58;
     private static final int FUEL_BAR_Y = 35;
@@ -28,16 +39,14 @@ public class ChunkEngineScreen extends AbstractContainerScreen<ChunkEngineMenu> 
 
     @Override
     protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        guiGraphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
 
         int remainingFuel = this.menu.getRemainingTicks();
         int chargedFuel = this.menu.getData().get(ChunkEngineBlockEntity.DATA_CHARGED_FUEL);
         if (chargedFuel > 0 && remainingFuel > 0) {
             int barHeight = FUEL_BAR_MAX_HEIGHT * remainingFuel / chargedFuel;
             int barY = FUEL_BAR_Y + FUEL_BAR_MAX_HEIGHT - barHeight;
-            guiGraphics.blit(TEXTURE, leftPos + FUEL_BAR_X, topPos + barY, 176, FUEL_BAR_MAX_HEIGHT - barHeight, FUEL_BAR_WIDTH, barHeight, 256, 256);
+            guiGraphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, leftPos + FUEL_BAR_X, topPos + barY, 176, FUEL_BAR_MAX_HEIGHT - barHeight, FUEL_BAR_WIDTH, barHeight, 256, 256);
         }
 
         renderHelpIcon(guiGraphics, mouseX, mouseY);
@@ -68,7 +77,7 @@ public class ChunkEngineScreen extends AbstractContainerScreen<ChunkEngineMenu> 
         int helpY = 6;
         if (mouseX >= leftPos + helpX && mouseX <= leftPos + helpX + 10 &&
                 mouseY >= topPos + helpY && mouseY <= topPos + helpY + 10) {
-            guiGraphics.renderTooltip(font, java.util.List.of(
+            guiGraphics.setTooltipForNextFrame(font, java.util.List.of(
                     Component.literal("§6Chunk Engine").getVisualOrderText(),
                     Component.literal("§fMaintains chunks in §cHard Mode§f.").getVisualOrderText(),
                     Component.literal("§7If a chunk has no active engine,").getVisualOrderText(),
@@ -81,7 +90,7 @@ public class ChunkEngineScreen extends AbstractContainerScreen<ChunkEngineMenu> 
 
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0x404040, false);
-        guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0x404040, false);
+        guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0xFF404040, false);
+        guiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0xFF404040, false);
     }
 }

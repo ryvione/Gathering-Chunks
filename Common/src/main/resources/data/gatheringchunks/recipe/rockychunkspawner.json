@@ -1,23 +1,17 @@
 {
-  "type" : "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shaped",
   "pattern": [
     "rCr",
     "CXC",
     "rCr"
   ],
-  "key" : {
-    "r" : {
-      "tag": "minecraft:stone_crafting_materials"
-    },
-    "C" : {
-      "item": "minecraft:copper_ingot"
-    },
-    "X" : {
-      "item": "gatheringchunks:worldcore"
-    }
+  "key": {
+    "r": "#minecraft:stone_crafting_materials",
+    "C": "minecraft:copper_ingot",
+    "X": "gatheringchunks:worldcore"
   },
-  "result" : {
-    "id" : "gatheringchunks:rockychunkspawner",
-    "count" : 1
+  "result": {
+    "id": "gatheringchunks:rockychunkspawner",
+    "count": 1
   }
 }

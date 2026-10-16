@@ -3,6 +3,8 @@
  * Modified work Copyright (c) 2026 Ryvione
  *
  * This file is part of Gathering Chunks (Ryvione's Fork).
+ * Original: https://github.com/immortius/chunkbychunk
+ *
  * Licensed under the MIT License. See LICENSE file in the project root for details.
  */
 package com.ryvione.gatheringchunks.client.screens;
@@ -11,17 +13,18 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.ryvione.gatheringchunks.common.GatheringChunksConstants;
 import com.ryvione.gatheringchunks.common.menus.WorldMenderMenu;
 import com.ryvione.gatheringchunks.common.util.SpiralIterator;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 
 public class WorldMenderScreen extends AbstractContainerScreen<WorldMenderMenu> {
 
-    public static final ResourceLocation CONTAINER_TEXTURE = ResourceLocation.fromNamespaceAndPath(
+    public static final Identifier CONTAINER_TEXTURE = Identifier.fromNamespaceAndPath(
             GatheringChunksConstants.MOD_ID, "textures/gui/container/worldmender.png"
     );
 
@@ -63,22 +66,12 @@ public class WorldMenderScreen extends AbstractContainerScreen<WorldMenderMenu> 
         }
         int frame = Mth.floor(animationTime / TICKS_PER_FRAME);
 
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        guiGraphics.blit(CONTAINER_TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, TEX_WIDTH, TEX_HEIGHT);
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, CONTAINER_TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, TEX_WIDTH, TEX_HEIGHT);
 
         SpiralIterator iterator = new SpiralIterator(0, 0);
         for (int i = 0; i < menu.getChunksSpawned(); i++) {
             Pos pos = getChunkPos(iterator.getX(), iterator.getY());
-            guiGraphics.blit(
-                    CONTAINER_TEXTURE,
-                    leftPos + HIGHLIGHT_INSET_X + pos.x(),
-                    topPos + HIGHLIGHT_INSET_Y + pos.y(),
-                    HIGHLIGHT_SIZE + pos.x(),
-                    frame * HIGHLIGHT_SIZE + pos.y(),
-                    2, 2,
-                    TEX_WIDTH, TEX_HEIGHT
-            );
+            guiGraphics.blit(RenderPipelines.GUI_TEXTURED, CONTAINER_TEXTURE, leftPos + HIGHLIGHT_INSET_X + pos.x(), topPos + HIGHLIGHT_INSET_Y + pos.y(), HIGHLIGHT_SIZE + pos.x(), frame * HIGHLIGHT_SIZE + pos.y(), 2, 2, TEX_WIDTH, TEX_HEIGHT);
             iterator.next();
         }
     }
@@ -112,7 +105,7 @@ public class WorldMenderScreen extends AbstractContainerScreen<WorldMenderMenu> 
 
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        guiGraphics.drawString(font, title, titleLabelX, titleLabelY, 0x404040, false);
-        guiGraphics.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0x404040, false);
+        guiGraphics.drawString(font, title, titleLabelX, titleLabelY, 0xFF404040, false);
+        guiGraphics.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0xFF404040, false);
     }
 }

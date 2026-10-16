@@ -1,3 +1,13 @@
+/*
+ * Original work Copyright (c) immortius
+ * Modified work Copyright (c) 2026 Ryvione
+ *
+ * This file is part of Gathering Chunks (Ryvione's Fork).
+ * Original: https://github.com/immortius/chunkbychunk
+ *
+ * Licensed under the MIT License. See LICENSE file in the project root for details.
+ */
+
 package com.ryvione.gatheringchunks.neoforge;
 
 import com.ryvione.gatheringchunks.common.blockEntities.BedrockChestBlockEntity;
@@ -216,11 +226,20 @@ public class NeoForgePlatformHelper implements CBCPlatformHelper {
 
     @Override
     public Fluid getFluidContent(BucketItem bucket) {
-        return bucket.content;
+        return bucket.getContent();
     }
 
     @Override
     public <T> void unfreezeRegistry(MappedRegistry<T> registry) {
+        setFrozenFlag(registry, false);
+    }
+
+    @Override
+    public <T> void refreezeRegistry(MappedRegistry<T> registry) {
+        setFrozenFlag(registry, true);
+    }
+
+    private static <T> void setFrozenFlag(MappedRegistry<T> registry, boolean frozen) {
         try {
             java.lang.reflect.Field frozenField = null;
             try {
@@ -229,9 +248,9 @@ public class NeoForgePlatformHelper implements CBCPlatformHelper {
                 frozenField = MappedRegistry.class.getDeclaredField("l");
             }
             frozenField.setAccessible(true);
-            frozenField.setBoolean(registry, false);
+            frozenField.setBoolean(registry, frozen);
         } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new RuntimeException("Failed to unfreeze registry on NeoForge", e);
+            throw new RuntimeException("Failed to set registry frozen flag on NeoForge", e);
         }
     }
 
@@ -251,14 +270,14 @@ public class NeoForgePlatformHelper implements CBCPlatformHelper {
 
     @Override
     public void sendConfigSavePacket(C2SSaveConfigPacket packet) {
-        if (net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT) {
+        if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {
             NeoForgeClientHelper.sendConfigSavePacket(packet);
         }
     }
 
     @Override
     public void openStarterBook() {
-        if (net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT) {
+        if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {
             NeoForgeClientHelper.openStarterBook();
         }
     }

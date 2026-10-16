@@ -1,26 +1,18 @@
 {
-  "type" : "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shaped",
   "pattern": [
     "pCp",
     "CXC",
     "sCs"
   ],
-  "key" : {
-    "p": {
-      "item": "minecraft:cherry_sapling"
-    },
-    "s" : {
-      "item": "minecraft:stick"
-    },
-    "C" : {
-      "item": "minecraft:copper_ingot"
-    },
-    "X" : {
-      "item": "gatheringchunks:worldcore"
-    }
+  "key": {
+    "p": "minecraft:cherry_sapling",
+    "s": "minecraft:stick",
+    "C": "minecraft:copper_ingot",
+    "X": "gatheringchunks:worldcore"
   },
-  "result" : {
-    "id" : "gatheringchunks:cherryblossumchunkspawner",
-    "count" : 1
+  "result": {
+    "id": "gatheringchunks:cherryblossumchunkspawner",
+    "count": 1
   }
 }

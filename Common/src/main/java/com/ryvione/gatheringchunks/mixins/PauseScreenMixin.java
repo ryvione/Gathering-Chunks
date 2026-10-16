@@ -16,7 +16,7 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -38,7 +38,7 @@ public abstract class PauseScreenMixin extends Screen {
                         Component.literal("\u2699"),
                         button -> {
                             if (this.minecraft != null) {
-                                this.minecraft.setScreen(new GatheringChunksConfigScreen(this));
+                                this.minecraft.setScreen(GatheringChunksConfigScreen.forLoadedWorld(this));
                             }
                         })
                 .bounds(x, y, 20, 20)

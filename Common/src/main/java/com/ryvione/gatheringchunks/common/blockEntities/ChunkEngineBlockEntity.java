@@ -1,3 +1,13 @@
+/*
+ * Original work Copyright (c) immortius
+ * Modified work Copyright (c) 2026 Ryvione
+ *
+ * This file is part of Gathering Chunks (Ryvione's Fork).
+ * Original: https://github.com/immortius/chunkbychunk
+ *
+ * Licensed under the MIT License. See LICENSE file in the project root for details.
+ */
+
 package com.ryvione.gatheringchunks.common.blockEntities;
 
 import com.ryvione.gatheringchunks.common.blocks.ChunkEngineBlock;
@@ -47,13 +57,13 @@ public class ChunkEngineBlockEntity extends BaseFueledBlockEntity {
                 case DATA_CHARGED_FUEL -> getChargedFuel();
                 case DATA_MAX_CHUNKS -> {
                     if (level instanceof ServerLevel serverLevel) {
-                         yield com.ryvione.gatheringchunks.server.world.ChunkSpawnController.get(serverLevel.getServer()).getMaxChunks(serverLevel.dimension().location().toString());
+                         yield com.ryvione.gatheringchunks.server.world.ChunkSpawnController.get(serverLevel.getServer()).getMaxChunks(serverLevel.dimension().identifier().toString());
                     }
                     yield 4;
                 }
                 case DATA_SPAWNED_CHUNKS -> {
                     if (level instanceof ServerLevel serverLevel) {
-                         yield com.ryvione.gatheringchunks.server.world.ChunkSpawnController.get(serverLevel.getServer()).getSpawnedChunkCount(serverLevel.dimension().location().toString());
+                         yield com.ryvione.gatheringchunks.server.world.ChunkSpawnController.get(serverLevel.getServer()).getSpawnedChunkCount(serverLevel.dimension().identifier().toString());
                     }
                     yield 0;
                 }

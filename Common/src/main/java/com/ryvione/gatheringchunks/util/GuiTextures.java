@@ -10,11 +10,11 @@
 package com.ryvione.gatheringchunks.util;
 
 import com.ryvione.gatheringchunks.common.GatheringChunksConstants;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public class GuiTextures {
 
-    public static final ResourceLocation WORLD_FORGE_TEXTURE = ResourceLocation.fromNamespaceAndPath(
+    public static final Identifier WORLD_FORGE_TEXTURE = Identifier.fromNamespaceAndPath(
             GatheringChunksConstants.MOD_ID, "textures/gui/container/worldforge.png"
     );
     public static final int WORLD_FORGE_TEX_WIDTH = 256;
@@ -24,7 +24,7 @@ public class GuiTextures {
     public static final int WORLD_FORGE_PROGRESS_U = 176;
     public static final int WORLD_FORGE_PROGRESS_V_BASE = 0;
     public static final int WORLD_FORGE_PROGRESS_HEIGHT = 11;
-    public static final ResourceLocation WORLD_MENDER_TEXTURE = ResourceLocation.fromNamespaceAndPath(
+    public static final Identifier WORLD_MENDER_TEXTURE = Identifier.fromNamespaceAndPath(
             GatheringChunksConstants.MOD_ID, "textures/gui/container/worldmender.png"
     );
     public static final int WORLD_MENDER_TEX_WIDTH = 512;
@@ -32,7 +32,7 @@ public class GuiTextures {
     public static final float WORLD_MENDER_TICKS_PER_FRAME = 4f;
     public static final int WORLD_MENDER_FRAME_COUNT = 8;
     public static final int WORLD_MENDER_HIGHLIGHT_SIZE = 128;
-    public static final ResourceLocation BEDROCK_CHEST_TEXTURE = ResourceLocation.fromNamespaceAndPath(
+    public static final Identifier BEDROCK_CHEST_TEXTURE = Identifier.fromNamespaceAndPath(
             GatheringChunksConstants.MOD_ID, "textures/gui/container/bedrockchest.png"
     );
 }

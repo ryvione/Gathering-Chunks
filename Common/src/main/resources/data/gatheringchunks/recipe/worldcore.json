@@ -1,17 +1,15 @@
 {
-  "type" : "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shaped",
   "pattern": [
     "cc ",
     "cc ",
     "   "
   ],
-  "key" : {
-    "c" : {
-      "item": "gatheringchunks:worldcrystal"
-    }
+  "key": {
+    "c": "gatheringchunks:worldcrystal"
   },
-  "result" : {
-    "id" : "gatheringchunks:worldcore",
-    "count" : 1
+  "result": {
+    "id": "gatheringchunks:worldcore",
+    "count": 1
   }
 }

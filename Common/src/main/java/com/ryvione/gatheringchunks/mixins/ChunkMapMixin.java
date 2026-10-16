@@ -11,6 +11,7 @@
 package com.ryvione.gatheringchunks.mixins;
 
 import com.mojang.datafixers.DataFixer;
+import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import com.ryvione.gatheringchunks.config.ChunkByChunkConfig;
 import com.ryvione.gatheringchunks.server.world.ChunkSpawnController;
 import com.ryvione.gatheringchunks.server.world.ControllableChunkMap;
@@ -19,8 +20,9 @@ import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import net.minecraft.server.level.*;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.chunk.storage.ChunkStorage;
+import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.level.chunk.storage.RegionStorageInfo;
+import net.minecraft.world.level.chunk.storage.SimpleRegionStorage;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -32,18 +34,24 @@ import javax.annotation.Nullable;
 import java.nio.file.Path;
 import java.util.List;
 @Mixin(targets = "net.minecraft.server.level.ChunkMap")
-public abstract class ChunkMapMixin extends ChunkStorage implements ControllableChunkMap {
-    public ChunkMapMixin(RegionStorageInfo $$0, Path $$1, DataFixer $$2, boolean $$3) {
-        super($$0, $$1, $$2, $$3);
+public abstract class ChunkMapMixin extends SimpleRegionStorage implements ControllableChunkMap {
+    public ChunkMapMixin(RegionStorageInfo $$0, Path $$1, DataFixer $$2, boolean $$3, DataFixTypes $$4) {
+        super($$0, $$1, $$2, $$3, $$4);
     }
     @Final
     @Shadow
     ServerLevel level;
     @Shadow
-    protected abstract Iterable<ChunkHolder> getChunks();
-    @Shadow
     @Nullable
     protected abstract ChunkHolder getVisibleChunkIfPresent(long pos);
+
+    @Shadow
+    private volatile Long2ObjectLinkedOpenHashMap<ChunkHolder> visibleChunkMap;
+
+    @Override
+    public Iterable<ChunkHolder> getVisibleChunkHolders() {
+        return this.visibleChunkMap.values();
+    }
     public void forceReloadChunk(ChunkPos chunkPos) {
         ChunkHolder chunkHolder = this.getVisibleChunkIfPresent(chunkPos.toLong());
         if (chunkHolder != null) {
@@ -69,8 +77,8 @@ public abstract class ChunkMapMixin extends ChunkStorage implements Controllable
         if (ChunkByChunkConfig.get().getDifficulty().isSpawnChunkStrip()
                 && status.isOrAfter(FullChunkStatus.ENTITY_TICKING)
                 && level.dimension().equals(Level.OVERWORLD)
-                && new ChunkPos(level.getSharedSpawnPos()).x == pos.x) {
-            BlockPos blockPos = pos.getMiddleBlockPosition(level.getMaxBuildHeight() - 1);
+                && new ChunkPos(level.getRespawnData().pos()).x == pos.x) {
+            BlockPos blockPos = pos.getMiddleBlockPosition(level.getMaxY());
             ChunkSpawnController.get(level.getServer()).request(level, "", false, blockPos);
         }
     }

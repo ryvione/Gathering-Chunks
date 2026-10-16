@@ -12,6 +12,7 @@ package com.ryvione.gatheringchunks.server.world;
 import com.ryvione.gatheringchunks.common.blockEntities.ChunkEngineBlockEntity;
 import com.ryvione.gatheringchunks.config.ChunkByChunkConfig;
 import com.ryvione.gatheringchunks.interop.Services;
+import com.ryvione.gatheringchunks.util.SavedDataCompat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -36,7 +37,7 @@ public class ChunkEngineManager extends SavedData {
 
     public record ChunkId(String level, long pos) {
         public static ChunkId from(ServerLevel level, ChunkPos pos) {
-            return new ChunkId(level.dimension().location().toString(), pos.toLong());
+            return new ChunkId(level.dimension().identifier().toString(), pos.toLong());
         }
 
         public CompoundTag save() {
@@ -47,7 +48,7 @@ public class ChunkEngineManager extends SavedData {
         }
 
         public static ChunkId load(CompoundTag tag) {
-            return new ChunkId(tag.getString("level"), tag.getLong("pos"));
+            return new ChunkId(tag.getStringOr("level", ""), tag.getLongOr("pos", 0L));
         }
     }
 
@@ -74,33 +75,30 @@ public class ChunkEngineManager extends SavedData {
     }
 
     public static ChunkEngineManager get(MinecraftServer server) {
-        return server.getLevel(Level.OVERWORLD).getChunkSource().getDataStorage().computeIfAbsent(
-                new SavedData.Factory<>(
-                        () -> new ChunkEngineManager(server),
-                        (tag, provider) -> ChunkEngineManager.load(server, tag, provider),
-                        DataFixTypes.LEVEL
-                ),
-                "chunkenginemanager"
-        );
+        return server.getLevel(Level.OVERWORLD).getChunkSource().getDataStorage().computeIfAbsent(SavedDataCompat.of(
+                "chunkenginemanager",
+                () -> new ChunkEngineManager(server),
+                tag -> ChunkEngineManager.load(server, tag),
+                manager -> manager.save(new CompoundTag())
+        ));
     }
 
-    private static ChunkEngineManager load(MinecraftServer server, CompoundTag tag, HolderLookup.Provider provider) {
+    private static ChunkEngineManager load(MinecraftServer server, CompoundTag tag) {
         ChunkEngineManager manager = new ChunkEngineManager(server);
-        ListTag pendingList = tag.getList("PendingChunks", CompoundTag.TAG_COMPOUND);
+        ListTag pendingList = tag.getListOrEmpty("PendingChunks");
         for (int i = 0; i < pendingList.size(); i++) {
-            CompoundTag entry = pendingList.getCompound(i);
-            manager.pendingChunks.put(ChunkId.load(entry.getCompound("id")), entry.getLong("time"));
+            CompoundTag entry = pendingList.getCompoundOrEmpty(i);
+            manager.pendingChunks.put(ChunkId.load(entry.getCompoundOrEmpty("id")), entry.getLongOr("time", 0L));
         }
-        ListTag activeList = tag.getList("ActiveChunks", CompoundTag.TAG_COMPOUND);
+        ListTag activeList = tag.getListOrEmpty("ActiveChunks");
         for (int i = 0; i < activeList.size(); i++) {
-            CompoundTag entry = activeList.getCompound(i);
-            manager.activeChunks.put(ChunkId.load(entry.getCompound("id")), entry.getLong("time"));
+            CompoundTag entry = activeList.getCompoundOrEmpty(i);
+            manager.activeChunks.put(ChunkId.load(entry.getCompoundOrEmpty("id")), entry.getLongOr("time", 0L));
         }
         return manager;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
+    public CompoundTag save(CompoundTag tag) {
         ListTag pendingList = new ListTag();
         for (Map.Entry<ChunkId, Long> entry : pendingChunks.entrySet()) {
             CompoundTag entryTag = new CompoundTag();
@@ -161,7 +159,11 @@ public class ChunkEngineManager extends SavedData {
         ChunkId id = ChunkId.from(level, new ChunkPos(pos));
         activeChunks.put(id, (long) server.getTickCount());
         pendingChunks.remove(id);
-        resettingChunks.remove(id);
+        ResetTask cancelledReset = resettingChunks.remove(id);
+        if (cancelledReset != null && cancelledReset.forced) {
+            ChunkPos enginePos = new ChunkPos(pos);
+            level.setChunkForced(enginePos.x, enginePos.z, false);
+        }
         setDirty();
     }
 
@@ -207,7 +209,7 @@ public class ChunkEngineManager extends SavedData {
 
     private ServerLevel getLevelFromId(String dimId) {
         for (ServerLevel level : server.getAllLevels()) {
-            if (level.dimension().location().toString().equals(dimId)) {
+            if (level.dimension().identifier().toString().equals(dimId)) {
                 return level;
             }
         }
@@ -219,8 +221,8 @@ public class ChunkEngineManager extends SavedData {
         if (resettingChunks.containsKey(id)) return;
 
         server.getAllLevels().forEach(level -> {
-            if (level.dimension().location().toString().equals(id.level)) {
-                resettingChunks.put(id, new ResetTask(id, level.getMinBuildHeight()));
+            if (level.dimension().identifier().toString().equals(id.level)) {
+                resettingChunks.put(id, new ResetTask(id, level.getMinY()));
                 setDirty();
             }
         });
@@ -239,7 +241,7 @@ public class ChunkEngineManager extends SavedData {
 
             ServerLevel level = null;
             for (ServerLevel l : server.getAllLevels()) {
-                if (l.dimension().location().toString().equals(id.level)) {
+                if (l.dimension().identifier().toString().equals(id.level)) {
                     level = l;
                     break;
                 }
@@ -256,11 +258,11 @@ public class ChunkEngineManager extends SavedData {
             }
 
             int minLayer = task.currentLayer;
-            int maxLayer = Math.min(minLayer + layersPerTick, level.getMaxBuildHeight());
+            int maxLayer = Math.min(minLayer + layersPerTick, level.getMaxY() + 1);
 
             performResetStep(level, new ChunkPos(id.pos), minLayer, maxLayer);
 
-            if (maxLayer >= level.getMaxBuildHeight()) {
+            if (maxLayer >= level.getMaxY() + 1) {
                 level.setChunkForced(new ChunkPos(id.pos).x, new ChunkPos(id.pos).z, false);
                 it.remove();
                 if (ChunkByChunkConfig.get().getDifficulty().isExperimentalChunkLimit()) {
@@ -295,8 +297,8 @@ public class ChunkEngineManager extends SavedData {
             }
         }
 
-        if (fromY == level.getMinBuildHeight()) {
-            BlockPos bedrockPos = pos.getMiddleBlockPosition(level.getMinBuildHeight());
+        if (fromY == level.getMinY()) {
+            BlockPos bedrockPos = pos.getMiddleBlockPosition(level.getMinY());
             level.setBlock(bedrockPos, Blocks.AIR.defaultBlockState(), 3);
         }
     }

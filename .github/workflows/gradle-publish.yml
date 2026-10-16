@@ -2,7 +2,7 @@ name: Build Mod & Publish
 on:
   workflow_dispatch:
     branches:
-      - GatheringChunks-1.21.1
+      - GatheringChunks-1.21.11
     inputs:
       version:
         description: 'Version Tag (e.g. v1.2.0)'

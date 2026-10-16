@@ -11,7 +11,7 @@
 package com.ryvione.gatheringchunks.common.util;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.portal.DimensionTransition;
+import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 public final class ChangeDimensionHelper {
     private static final ThreadLocal<Vec3> portalInfo = new ThreadLocal<>();
@@ -22,15 +22,15 @@ public final class ChangeDimensionHelper {
     }
     public static Entity changeDimension(Entity entity, ServerLevel level, Vec3 pos) {
         portalInfo.set(pos);
-        DimensionTransition transition = new DimensionTransition(
+        TeleportTransition transition = new TeleportTransition(
                 level,
                 pos,
                 Vec3.ZERO, 
                 entity.getYRot(),
                 entity.getXRot(),
-                DimensionTransition.DO_NOTHING 
+                TeleportTransition.DO_NOTHING 
         );
-        Entity result = entity.changeDimension(transition);
+        Entity result = entity.teleport(transition);
         portalInfo.remove();
         return result;
     }

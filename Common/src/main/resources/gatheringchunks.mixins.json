@@ -4,23 +4,19 @@
   "package": "com.ryvione.gatheringchunks.mixins",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "BucketFluidAccessor",
-    "ChunkGeneratorAccessor",
-    "ChunkGeneratorStructureAccessor",
     "ChunkMapMixin",
     "DefrostedRegistry",
-    "EntityChangeDimensionMixin",
     "FluidTickMixin",
     "HolderReferenceAccessor",
     "MobSpawnVoidChunkMixin",
     "MultiNoiseBiomeSourceAccessor",
-    "NoiseBasedChunkGeneratorMixin",
     "NoiseSettingsFixMixin",
-    "OverworldBiomeBuilderAccessor",
+    "ServerLevelLazyStructureSetupMixin",
     "StructureCheckMixin"
   ],
   "client": [
-    "LevelRendererMixin",
+    "CreateWorldMoreTabMixin",
+    "CreateWorldScreenMixin",
     "PauseScreenMixin",
     "TitleScreenMixin"
   ],

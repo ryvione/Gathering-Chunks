@@ -10,6 +10,7 @@
 package com.ryvione.gatheringchunks.server.world;
 
 import com.ryvione.gatheringchunks.common.GatheringChunksConstants;
+import com.ryvione.gatheringchunks.util.SavedDataCompat;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -53,15 +54,15 @@ public class BiomeCoordinateCache extends SavedData {
     private static final int MAX_SCANNED_CHUNKS_PER_DIM = 20000;
 
     public static BiomeCoordinateCache get(MinecraftServer server) {
-        return server.getLevel(Level.OVERWORLD).getChunkSource().getDataStorage().computeIfAbsent(
-                new SavedData.Factory<>(
-                        () -> new BiomeCoordinateCache(server),
-                        (tag, provider) -> BiomeCoordinateCache.load(server, tag, provider),
-                        DataFixTypes.LEVEL),
-                "biomecoordinatecache");
+        return server.getLevel(Level.OVERWORLD).getChunkSource().getDataStorage().computeIfAbsent(SavedDataCompat.of(
+                "biomecoordinatecache",
+                () -> new BiomeCoordinateCache(server),
+                tag -> BiomeCoordinateCache.load(server, tag),
+                cache -> cache.save(new CompoundTag())
+        ));
     }
 
-    private static BiomeCoordinateCache load(MinecraftServer server, CompoundTag tag, HolderLookup.Provider provider) {
+    private static BiomeCoordinateCache load(MinecraftServer server, CompoundTag tag) {
         BiomeCoordinateCache cache = new BiomeCoordinateCache(server);
         cache.loadInternal(tag);
         return cache;
@@ -82,27 +83,27 @@ public class BiomeCoordinateCache extends SavedData {
     }
 
     private void loadInternal(CompoundTag tag) {
-        CompoundTag dimensionsTag = tag.getCompound("dimensions");
-        for (String dimensionKey : dimensionsTag.getAllKeys()) {
-            CompoundTag dimensionData = dimensionsTag.getCompound(dimensionKey);
+        CompoundTag dimensionsTag = tag.getCompoundOrEmpty("dimensions");
+        for (String dimensionKey : dimensionsTag.keySet()) {
+            CompoundTag dimensionData = dimensionsTag.getCompoundOrEmpty(dimensionKey);
 
             Map<String, List<ChunkPos>> biomesForDimension = new ConcurrentHashMap<>();
-            CompoundTag biomesTag = dimensionData.getCompound("biomes");
-            for (String biomeTheme : biomesTag.getAllKeys()) {
-                ListTag chunksTag = biomesTag.getList(biomeTheme, ListTag.TAG_LONG);
+            CompoundTag biomesTag = dimensionData.getCompoundOrEmpty("biomes");
+            for (String biomeTheme : biomesTag.keySet()) {
+                ListTag chunksTag = biomesTag.getListOrEmpty(biomeTheme);
                 List<ChunkPos> chunks = Collections.synchronizedList(new ArrayList<>());
                 for (int i = 0; i < chunksTag.size(); i++) {
-                    chunks.add(new ChunkPos(((net.minecraft.nbt.LongTag) chunksTag.get(i)).getAsLong()));
+                    chunks.add(new ChunkPos(((net.minecraft.nbt.LongTag) chunksTag.get(i)).longValue()));
                 }
                 biomesForDimension.put(biomeTheme, chunks);
             }
             biomeCache.put(dimensionKey, biomesForDimension);
 
-            scanProgress.put(dimensionKey, dimensionData.getInt("scanProgress"));
-            initialScanComplete.put(dimensionKey, dimensionData.getBoolean("initialScanComplete"));
+            scanProgress.put(dimensionKey, dimensionData.getIntOr("scanProgress", 0));
+            initialScanComplete.put(dimensionKey, dimensionData.getBooleanOr("initialScanComplete", false));
 
             if (dimensionData.contains("scannedChunks")) {
-                long[] scannedArray = dimensionData.getLongArray("scannedChunks");
+                long[] scannedArray = dimensionData.getLongArray("scannedChunks").orElse(new long[0]);
                 Set<Long> scanned = ConcurrentHashMap.newKeySet();
                 for (long l : scannedArray) {
                     scanned.add(l);
@@ -112,8 +113,7 @@ public class BiomeCoordinateCache extends SavedData {
         }
     }
 
-    @Override
-    public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
+    public CompoundTag save(CompoundTag tag) {
         CompoundTag dimensionsTag = new CompoundTag();
 
         Set<String> allDimKeys = new java.util.HashSet<>();
@@ -166,11 +166,11 @@ public class BiomeCoordinateCache extends SavedData {
         
         for (ServerLevel level : server.getAllLevels()) {
             if (level.getChunkSource().getGenerator() instanceof SkyChunkGenerator skyGen) {
-                levelsToScan.add(new Pair<>(level.dimension().location().toString(), level));
+                levelsToScan.add(new Pair<>(level.dimension().identifier().toString(), level));
                 for (Map.Entry<String, ResourceKey<Level>> entry : skyGen.getBiomeDimensions().entrySet()) {
                     ServerLevel themeLevel = server.getLevel(entry.getValue());
                     if (themeLevel != null) {
-                        themeDimLevels.put(themeLevel.dimension().location().toString(), themeLevel);
+                        themeDimLevels.put(themeLevel.dimension().identifier().toString(), themeLevel);
                     }
                 }
             }
@@ -227,8 +227,8 @@ public class BiomeCoordinateCache extends SavedData {
         int progress = scanProgress.getOrDefault(dimensionKey, 0);
         int chunksScanned = 0;
 
-        int spawnChunkX = level.getSharedSpawnPos().getX() >> 4;
-        int spawnChunkZ = level.getSharedSpawnPos().getZ() >> 4;
+        int spawnChunkX = level.getRespawnData().pos().getX() >> 4;
+        int spawnChunkZ = level.getRespawnData().pos().getZ() >> 4;
 
         int startRadius = progress;
         int endRadius = Math.min(startRadius + RINGS_PER_SCAN, INITIAL_SCAN_RADIUS);
@@ -358,7 +358,7 @@ public class BiomeCoordinateCache extends SavedData {
         if (biomeHolder == null) return null;
         var keyOpt = biomeHolder.unwrapKey();
         if (keyOpt.isEmpty()) return null;
-        String biomeName = keyOpt.get().location().getPath();
+        String biomeName = keyOpt.get().identifier().getPath();
 
         if (biomeName.equals("nether_wastes")) return "netherwastes";
         if (biomeName.equals("soul_sand_valley")) return "soulsandvalley";

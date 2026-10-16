@@ -1,20 +1,16 @@
 {
-  "type" : "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shaped",
   "pattern": [
     "   ",
     " s ",
     " c "
   ],
-  "key" : {
-    "s" : {
-      "item": "minecraft:compass"
-    },
-    "c" : {
-      "item": "gatheringchunks:worldcore"
-    }
+  "key": {
+    "s": "minecraft:compass",
+    "c": "gatheringchunks:worldcore"
   },
-  "result" : {
-    "id" : "gatheringchunks:worldscanner",
-    "count" : 1
+  "result": {
+    "id": "gatheringchunks:worldscanner",
+    "count": 1
   }
 }

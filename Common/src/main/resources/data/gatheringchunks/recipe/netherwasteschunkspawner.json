@@ -1,23 +1,17 @@
 {
-  "type" : "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shaped",
   "pattern": [
     "nCn",
     "CXC",
     "nCn"
   ],
-  "key" : {
-    "n" : {
-      "item": "minecraft:netherrack"
-    },
-    "C" : {
-      "item": "minecraft:copper_ingot"
-    },
-    "X" : {
-      "item": "gatheringchunks:worldcore"
-    }
+  "key": {
+    "n": "minecraft:netherrack",
+    "C": "minecraft:copper_ingot",
+    "X": "gatheringchunks:worldcore"
   },
-  "result" : {
-    "id" : "gatheringchunks:netherwasteschunkspawner",
-    "count" : 1
+  "result": {
+    "id": "gatheringchunks:netherwasteschunkspawner",
+    "count": 1
   }
 }

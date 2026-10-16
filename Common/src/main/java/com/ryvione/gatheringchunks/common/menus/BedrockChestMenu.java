@@ -37,7 +37,7 @@ public class BedrockChestMenu extends BaseInventoryContainerMenu {
     @Override
     public void removed(Player player) {
         super.removed(player);
-        if (!player.level().isClientSide && getContainer() instanceof BlockEntity blockEntity) {
+        if (!player.level().isClientSide() && getContainer() instanceof BlockEntity blockEntity) {
             BlockPos pos = blockEntity.getBlockPos();
             if (player.level() instanceof ServerLevel serverLevel) {
                 ChestTracker tracker = ChestTracker.get(serverLevel.getServer());

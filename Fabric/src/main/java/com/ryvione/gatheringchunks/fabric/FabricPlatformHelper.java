@@ -1,3 +1,13 @@
+/*
+ * Original work Copyright (c) immortius
+ * Modified work Copyright (c) 2026 Ryvione
+ *
+ * This file is part of Gathering Chunks (Ryvione's Fork).
+ * Original: https://github.com/immortius/chunkbychunk
+ *
+ * Licensed under the MIT License. See LICENSE file in the project root for details.
+ */
+
 package com.ryvione.gatheringchunks.fabric;
 
 import com.ryvione.gatheringchunks.common.CommonRegistry;
@@ -18,7 +28,6 @@ import com.ryvione.gatheringchunks.common.network.C2SSaveConfigPacket;
 import com.ryvione.gatheringchunks.common.network.S2COpenConfigPacket;
 import com.ryvione.gatheringchunks.common.network.S2CSyncConfigPacket;
 import com.ryvione.gatheringchunks.interop.CBCPlatformHelper;
-import com.ryvione.gatheringchunks.mixins.BucketFluidAccessor;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.MappedRegistry;
@@ -218,16 +227,20 @@ public final class FabricPlatformHelper implements CBCPlatformHelper {
 
     @Override
     public Fluid getFluidContent(BucketItem bucket) {
-        if (bucket instanceof BucketFluidAccessor bucketAccess) {
-            return bucketAccess.getFluidContent();
-        }
-        return null;
+        return bucket.getContent();
     }
 
     @Override
     public <T> void unfreezeRegistry(MappedRegistry<T> registry) {
         if (registry instanceof com.ryvione.gatheringchunks.mixins.DefrostedRegistry defrosted) {
             defrosted.setFrozen(false);
+        }
+    }
+
+    @Override
+    public <T> void refreezeRegistry(MappedRegistry<T> registry) {
+        if (registry instanceof com.ryvione.gatheringchunks.mixins.DefrostedRegistry defrosted) {
+            defrosted.setFrozen(true);
         }
     }
 

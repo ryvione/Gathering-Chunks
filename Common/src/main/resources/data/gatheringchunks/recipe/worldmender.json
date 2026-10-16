@@ -1,20 +1,16 @@
 {
-  "type" : "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shaped",
   "pattern": [
     " s ",
     "scs",
     " s "
   ],
-  "key" : {
-    "s" : {
-      "item": "minecraft:dispenser"
-    },
-    "c" : {
-      "item": "gatheringchunks:worldcore"
-    }
+  "key": {
+    "s": "minecraft:dispenser",
+    "c": "gatheringchunks:worldcore"
   },
-  "result" : {
-    "id" : "gatheringchunks:worldmender",
-    "count" : 1
+  "result": {
+    "id": "gatheringchunks:worldmender",
+    "count": 1
   }
 }

@@ -66,6 +66,18 @@ public class WorldScannerMenu extends BaseInventoryContainerMenu {
         return this.containerData.get(WorldScannerBlockEntity.DATA_MAX_ENERGY);
     }
 
+    public int getScannerChunkX() {
+        int blockX = (this.containerData.get(WorldScannerBlockEntity.DATA_POS_X_HIGH) << 16)
+                | (this.containerData.get(WorldScannerBlockEntity.DATA_POS_X_LOW) & 0xFFFF);
+        return blockX >> 4;
+    }
+
+    public int getScannerChunkZ() {
+        int blockZ = (this.containerData.get(WorldScannerBlockEntity.DATA_POS_Z_HIGH) << 16)
+                | (this.containerData.get(WorldScannerBlockEntity.DATA_POS_Z_LOW) & 0xFFFF);
+        return blockZ >> 4;
+    }
+
     public int getCurrentChunkX() {
         return this.containerData.get(WorldScannerBlockEntity.DATA_SCANNING_X);
     }

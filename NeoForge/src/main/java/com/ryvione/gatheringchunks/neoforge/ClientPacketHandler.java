@@ -25,7 +25,7 @@ public class ClientPacketHandler {
     public static void handleOpenConfig(final S2COpenConfigPacket payload, final IPayloadContext context) {
         context.enqueueWork(() -> {
             LOGGER.info("[ClientPacketHandler] Opening config screen");
-            Minecraft.getInstance().setScreen(new GatheringChunksConfigScreen(null));
+            Minecraft.getInstance().setScreen(GatheringChunksConfigScreen.forLoadedWorld(null));
         });
     }
 

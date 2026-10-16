@@ -11,6 +11,7 @@ package com.ryvione.gatheringchunks.neoforge;
 
 import com.ryvione.gatheringchunks.common.CommonEventHandler;
 import com.ryvione.gatheringchunks.common.GatheringChunksConstants;
+import com.ryvione.gatheringchunks.common.util.ConfigUtil;
 import com.ryvione.gatheringchunks.common.data.ScannerDataLoader;
 import com.ryvione.gatheringchunks.common.data.SkyDimensionDataLoader;
 import com.ryvione.gatheringchunks.common.update.UpdateNotification;
@@ -26,6 +27,7 @@ import com.ryvione.gatheringchunks.common.util.ChunkUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
@@ -37,7 +39,7 @@ import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.AddReloadListenerEvent;
+import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -68,41 +70,7 @@ public class EventHandler {
 
         GatheringChunksConstants.LOGGER.info("ServerAboutToStartEvent - loading config & preparing dimensions");
 
-        java.nio.file.Path serverConfigPath = server.getWorldPath(LevelResource.ROOT)
-                .resolve("serverconfig")
-                .resolve(GatheringChunksConstants.CONFIG_FILE);
-
-        java.nio.file.Path defaultFilePath = Paths.get(GatheringChunksConstants.DEFAULT_CONFIG_PATH)
-                .resolve(GatheringChunksConstants.CONFIG_FILE);
-
-        java.nio.file.Path centralConfigPath = ConfigSystem.getCentralConfigPath(GatheringChunksConstants.CONFIG_FILE);
-
-        boolean centralExists = Files.exists(centralConfigPath);
-        boolean worldExists = Files.exists(serverConfigPath);
-
-        if (!centralExists && !worldExists) {
-            configSystem.synchConfig(serverConfigPath, defaultFilePath, ChunkByChunkConfig.get());
-        } else if (centralExists && !worldExists) {
-            configSystem.synchConfig(centralConfigPath, ChunkByChunkConfig.get());
-        } else if (!centralExists) {
-            configSystem.synchConfig(serverConfigPath, defaultFilePath, ChunkByChunkConfig.get());
-        } else {
-            java.nio.file.Path source = centralConfigPath;
-            try {
-                if (Files.getLastModifiedTime(serverConfigPath).compareTo(Files.getLastModifiedTime(centralConfigPath)) > 0) {
-                    GatheringChunksConstants.LOGGER.info(
-                            "[ConfigSystem] serverconfig/{} was edited more recently than the central config - using it for this boot",
-                            GatheringChunksConstants.CONFIG_FILE);
-                    source = serverConfigPath;
-                }
-            } catch (java.io.IOException e) {
-                GatheringChunksConstants.LOGGER.warn("[ConfigSystem] Could not compare config file timestamps, defaulting to central config", e);
-            }
-            configSystem.synchConfig(source, ChunkByChunkConfig.get());
-        }
-
-        configSystem.write(centralConfigPath, ChunkByChunkConfig.get());
-        configSystem.write(serverConfigPath, ChunkByChunkConfig.get());
+        ConfigUtil.reloadConfig(server);
 
         if (ChunkByChunkConfig.get().getGeneration().isEnabled()) {
             GatheringChunksConstants.LOGGER.info("Applying sky dimension configuration EARLY (before level load)");
@@ -161,11 +129,13 @@ public class EventHandler {
     }
 
     @SubscribeEvent
-    public static void onRegisterReloadListeners(AddReloadListenerEvent event) {
+    public static void onRegisterReloadListeners(AddServerReloadListenersEvent event) {
         GatheringChunksConstants.LOGGER.info("Registering data reload listeners");
 
-        event.addListener(new ScannerDataLoader(event.getRegistryAccess()));
-        event.addListener(new SkyDimensionDataLoader(event.getRegistryAccess()));
+        event.addListener(Identifier.fromNamespaceAndPath(GatheringChunksConstants.MOD_ID, "scanner_data_loader"),
+                new ScannerDataLoader(event.getRegistryAccess()));
+        event.addListener(Identifier.fromNamespaceAndPath(GatheringChunksConstants.MOD_ID, "sky_dimension_loader"),
+                new SkyDimensionDataLoader(event.getRegistryAccess()));
 
         GatheringChunksConstants.LOGGER.info("Data reload listeners registered");
     }
@@ -188,10 +158,11 @@ public class EventHandler {
 
         if (event.getEntity() instanceof ServerPlayer player) {
             UpdateNotification.sendUpdateNotification(player);
+            com.ryvione.gatheringchunks.common.util.ConfigUtil.notifyLegacyWorldJoin(player);
 
             try {
                 com.google.gson.Gson gson = new com.google.gson.GsonBuilder().create();
-                String configJson = gson.toJson(ChunkByChunkConfig.get().getGatheringChunksConfig());
+                String configJson = gson.toJson(ChunkByChunkConfig.get());
                 com.ryvione.gatheringchunks.common.network.S2CSyncConfigPacket packet =
                         new com.ryvione.gatheringchunks.common.network.S2CSyncConfigPacket(configJson);
                 com.ryvione.gatheringchunks.interop.Services.PLATFORM.sendConfigSyncPacket(player, packet);
@@ -209,12 +180,12 @@ public class EventHandler {
             }
             player.addTag("gatheringchunks.spawned");
 
-            ServerLevel level = player.serverLevel();
+            ServerLevel level = player.level();
             if (!level.dimension().equals(Level.OVERWORLD))
                 return;
 
             if (level.getChunkSource().getGenerator() instanceof SkyChunkGenerator) {
-                BlockPos spawnPos = level.getSharedSpawnPos();
+                BlockPos spawnPos = level.getRespawnData().pos();
                 ChunkPos spawnChunk = new ChunkPos(spawnPos);
                 ChunkPos playerChunk = new ChunkPos(player.blockPosition());
 
@@ -223,25 +194,29 @@ public class EventHandler {
                             "Correcting initial spawn position from chunk [{},{}] to spawn chunk [{},{}] for player {}",
                             playerChunk.x, playerChunk.z, spawnChunk.x, spawnChunk.z, player.getName().getString());
 
-                    int safeY = level.getMaxBuildHeight();
+                    int safeY = -1;
                     net.minecraft.world.level.chunk.LevelChunk spawnLevelChunk =
-                            level.getChunkAt(spawnChunk.getMiddleBlockPosition(0));
+                            level.getChunkSource().getChunkNow(spawnChunk.x, spawnChunk.z);
                     if (spawnLevelChunk != null) {
                         int candidateY = ChunkUtil.getSafeSpawnHeight(spawnLevelChunk, spawnChunk.getMiddleBlockX(), spawnChunk.getMiddleBlockZ());
-                        if (candidateY > level.getMinBuildHeight() + 10) {
+                        if (candidateY > level.getMinY() + 10) {
                             safeY = candidateY;
                         } else {
                             safeY = spawnLevelChunk.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, 8, 8) + 1;
                         }
                     }
 
+                    if (safeY < 0) {
+                        GatheringChunksConstants.LOGGER.info("Spawn chunk not loaded yet - leaving {} in place", player.getName().getString());
+                        return;
+                    }
                     player.teleportTo(
                             level,
                             spawnChunk.getMiddleBlockX() + 0.5,
                             safeY,
                             spawnChunk.getMiddleBlockZ() + 0.5,
-                            player.getYRot(),
-                            player.getXRot());
+                            java.util.Set.of(), player.getYRot(),
+                            player.getXRot(), true);
                 }
             }
         }
@@ -253,39 +228,42 @@ public class EventHandler {
             return;
 
         if (event.getEntity() instanceof ServerPlayer player) {
-            if (player.getRespawnPosition() != null)
+            if (player.getRespawnConfig() != null)
                 return;
 
-            ServerLevel level = player.serverLevel();
+            ServerLevel level = player.level();
             if (!level.dimension().equals(Level.OVERWORLD))
                 return;
 
             if (level.getChunkSource().getGenerator() instanceof SkyChunkGenerator) {
-                BlockPos spawnPos = level.getSharedSpawnPos();
+                BlockPos spawnPos = level.getRespawnData().pos();
                 ChunkPos spawnChunk = new ChunkPos(spawnPos);
 
                 GatheringChunksConstants.LOGGER.debug(
                         "Forcing respawn to stay inside spawn chunk [{},{}]",
                         spawnChunk.x, spawnChunk.z);
 
-                int safeY = level.getMaxBuildHeight();
-                LevelChunk spawnLevelChunk = level.getChunkAt(spawnChunk.getMiddleBlockPosition(0));
+                int safeY = -1;
+                LevelChunk spawnLevelChunk = level.getChunkSource().getChunkNow(spawnChunk.x, spawnChunk.z);
                 if (spawnLevelChunk != null) {
                     int candidateY = ChunkUtil.getSafeSpawnHeight(spawnLevelChunk, spawnChunk.getMiddleBlockX(), spawnChunk.getMiddleBlockZ());
-                    if (candidateY > level.getMinBuildHeight() + 10) {
+                    if (candidateY > level.getMinY() + 10) {
                         safeY = candidateY;
                     } else {
                         safeY = spawnLevelChunk.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, 8, 8) + 1;
                     }
                 }
 
+                if (safeY < 0) {
+                    return;
+                }
                 player.teleportTo(
                         level,
                         spawnChunk.getMiddleBlockX() + 0.5,
                         safeY,
                         spawnChunk.getMiddleBlockZ() + 0.5,
-                        player.getYRot(),
-                        player.getXRot());
+                        java.util.Set.of(), player.getYRot(),
+                        player.getXRot(), true);
             }
         }
     }

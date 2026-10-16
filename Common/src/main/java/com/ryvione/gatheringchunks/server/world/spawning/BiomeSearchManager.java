@@ -1,3 +1,13 @@
+/*
+ * Original work Copyright (c) immortius
+ * Modified work Copyright (c) 2026 Ryvione
+ *
+ * This file is part of Gathering Chunks (Ryvione's Fork).
+ * Original: https://github.com/immortius/chunkbychunk
+ *
+ * Licensed under the MIT License. See LICENSE file in the project root for details.
+ */
+
 package com.ryvione.gatheringchunks.server.world.spawning;
 
 import com.ryvione.gatheringchunks.common.GatheringChunksConstants;
@@ -213,7 +223,7 @@ public class BiomeSearchManager {
             for (int x = 0; x < 16; x += 4) {
                 for (int z = 0; z < 16; z += 4) {
                     int y = chunk.getHeight(heightmapType, x, z);
-                    if (y > level.getMinBuildHeight()) {
+                    if (y > level.getMinY()) {
                         heights.add(y);
                         totalHeight += y;
                         sampleCount++;

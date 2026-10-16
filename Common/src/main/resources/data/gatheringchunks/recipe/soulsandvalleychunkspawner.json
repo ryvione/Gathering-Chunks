@@ -1,26 +1,18 @@
 {
-  "type" : "minecraft:crafting_shaped",
+  "type": "minecraft:crafting_shaped",
   "pattern": [
     "bCb",
     "CXC",
     "sCb"
   ],
-  "key" : {
-    "b" : {
-      "item": "minecraft:bone"
-    },
-    "s" : {
-      "item": "minecraft:soul_sand"
-    },
-    "C" : {
-      "item": "minecraft:copper_ingot"
-    },
-    "X" : {
-      "item": "gatheringchunks:worldcore"
-    }
+  "key": {
+    "b": "minecraft:bone",
+    "s": "minecraft:soul_sand",
+    "C": "minecraft:copper_ingot",
+    "X": "gatheringchunks:worldcore"
   },
-  "result" : {
-    "id" : "gatheringchunks:soulsandvalleychunkspawner",
-    "count" : 1
+  "result": {
+    "id": "gatheringchunks:soulsandvalleychunkspawner",
+    "count": 1
   }
 }

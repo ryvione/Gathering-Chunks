@@ -6,12 +6,8 @@
     " c "
   ],
   "key": {
-    "a": {
-      "item": "minecraft:amethyst_shard"
-    },
-    "c": {
-      "item": "gatheringchunks:worldcore"
-    }
+    "a": "minecraft:amethyst_shard",
+    "c": "gatheringchunks:worldcore"
   },
   "result": {
     "id": "gatheringchunks:cavescanner",

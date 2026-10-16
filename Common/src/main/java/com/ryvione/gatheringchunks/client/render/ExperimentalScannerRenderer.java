@@ -14,9 +14,8 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.ryvione.gatheringchunks.common.blockEntities.WorldScannerBlockEntity;
 import com.ryvione.gatheringchunks.config.ChunkByChunkConfig;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.world.item.Item;
@@ -38,6 +37,13 @@ public class ExperimentalScannerRenderer {
     private static long lastCacheClearTime = 0;
     private static final long CACHE_EXPIRY_MS = 10000;
 
+    public static void renderHighlights() {
+        Minecraft mc = Minecraft.getInstance();
+        MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
+        render(new PoseStack(), buffers, mc.gameRenderer.getMainCamera());
+        buffers.endBatch(RenderTypes.LINES);
+    }
+
     public static void render(PoseStack poseStack, MultiBufferSource bufferSource, net.minecraft.client.Camera camera) {
         if (!ChunkByChunkConfig.get().getWorldScannerConfig().isExperimentalMode()) {
             return;
@@ -53,7 +59,7 @@ public class ExperimentalScannerRenderer {
             lastCacheClearTime = currentTime;
         }
 
-        Vec3 camPos = camera.getPosition();
+        Vec3 camPos = camera.position();
         
         int renderDistance = mc.options.getEffectiveRenderDistance();
         int playerChunkX = SectionPos.blockToSectionCoord(camPos.x);
@@ -133,14 +139,14 @@ public class ExperimentalScannerRenderer {
         ChunkPos cp = chunk.getPos();
         Map<Block, List<BlockPos>> chunkCache = blockCache.computeIfAbsent(cp, k -> new HashMap<>());
 
-        VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.lines());
+        VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderTypes.LINES);
 
         for (Block targetBlock : targetBlocks) {
             List<BlockPos> positions = chunkCache.get(targetBlock);
             if (positions == null) {
                 positions = new ArrayList<>();
-                for (BlockPos pos : BlockPos.betweenClosed(cp.getMinBlockX(), chunk.getMinBuildHeight(), cp.getMinBlockZ(), 
-                                                           cp.getMaxBlockX(), chunk.getMaxBuildHeight(), cp.getMaxBlockZ())) {
+                for (BlockPos pos : BlockPos.betweenClosed(cp.getMinBlockX(), chunk.getMinY(), cp.getMinBlockZ(), 
+                                                           cp.getMaxBlockX(), chunk.getMaxY() + 1, cp.getMaxBlockZ())) {
                     if (chunk.getBlockState(pos).is(targetBlock)) {
                         positions.add(pos.immutable());
                     }
@@ -164,7 +170,7 @@ public class ExperimentalScannerRenderer {
         };
         
         for (BlockPos adjPos : adjacent) {
-            if (adjPos.getY() < chunk.getMinBuildHeight() || adjPos.getY() > chunk.getMaxBuildHeight()) {
+            if (adjPos.getY() < chunk.getMinY() || adjPos.getY() > chunk.getMaxY() + 1) {
                 return true;
             }
             
@@ -193,11 +199,34 @@ public class ExperimentalScannerRenderer {
         return MapColor.COLOR_BLACK;
     }
 
+    private static void renderUnitLineBox(PoseStack poseStack, VertexConsumer consumer, float r, float g, float b, float a) {
+        PoseStack.Pose pose = poseStack.last();
+        float[][] corners = {
+            {0, 0, 0}, {1, 0, 0}, {1, 0, 1}, {0, 0, 1},
+            {0, 1, 0}, {1, 1, 0}, {1, 1, 1}, {0, 1, 1}
+        };
+        int[][] edges = {
+            {0, 1}, {1, 2}, {2, 3}, {3, 0},
+            {4, 5}, {5, 6}, {6, 7}, {7, 4},
+            {0, 4}, {1, 5}, {2, 6}, {3, 7}
+        };
+        for (int[] edge : edges) {
+            float[] from = corners[edge[0]];
+            float[] to = corners[edge[1]];
+            float dx = to[0] - from[0];
+            float dy = to[1] - from[1];
+            float dz = to[2] - from[2];
+            float len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+            consumer.addVertex(pose, from[0], from[1], from[2]).setColor(r, g, b, a).setNormal(dx / len, dy / len, dz / len);
+            consumer.addVertex(pose, to[0], to[1], to[2]).setColor(r, g, b, a).setNormal(dx / len, dy / len, dz / len);
+        }
+    }
+
     private static void renderHighlight(PoseStack poseStack, VertexConsumer vertexConsumer, BlockPos pos, float r, float g, float b, Vec3 camPos) {
         poseStack.pushPose();
 
         poseStack.translate(pos.getX() - camPos.x, pos.getY() - camPos.y, pos.getZ() - camPos.z);
-        LevelRenderer.renderLineBox(poseStack, vertexConsumer, 0, 0, 0, 1, 1, 1, r, g, b, 1.0f);
+        renderUnitLineBox(poseStack, vertexConsumer, r, g, b, 1.0f);
         poseStack.popPose();
     }
 }

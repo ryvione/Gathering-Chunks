@@ -1,3 +1,13 @@
+/*
+ * Original work Copyright (c) immortius
+ * Modified work Copyright (c) 2026 Ryvione
+ *
+ * This file is part of Gathering Chunks (Ryvione's Fork).
+ * Original: https://github.com/immortius/chunkbychunk
+ *
+ * Licensed under the MIT License. See LICENSE file in the project root for details.
+ */
+
 package com.ryvione.gatheringchunks.neoforge;
 
 import com.google.gson.Gson;
@@ -8,6 +18,7 @@ import com.ryvione.gatheringchunks.common.network.S2CSyncConfigPacket;
 import com.ryvione.gatheringchunks.config.ChunkByChunkConfig;
 import com.ryvione.gatheringchunks.config.system.ConfigSystem;
 import com.ryvione.gatheringchunks.interop.Services;
+import net.minecraft.commands.Commands;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -18,7 +29,7 @@ public class ServerPacketHandler {
     public static void handleSaveConfig(C2SSaveConfigPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
             ServerPlayer player = (ServerPlayer) context.player();
-            if (!player.hasPermissions(2)) {
+            if (!Commands.LEVEL_GAMEMASTERS.check(player.permissions())) {
                 player.sendSystemMessage(Component.literal("§c[Gathering Chunks] No permission to modify server config."));
                 return;
             }
@@ -31,11 +42,11 @@ public class ServerPacketHandler {
 
                 applyConfig(incoming);
 
-                com.ryvione.gatheringchunks.common.util.ConfigUtil.saveDefaultConfig(player.getServer());
+                com.ryvione.gatheringchunks.common.util.ConfigUtil.saveDefaultConfig(player.level().getServer());
 
-                String syncJson = GSON.toJson(ChunkByChunkConfig.get().getGatheringChunksConfig());
+                String syncJson = GSON.toJson(ChunkByChunkConfig.get());
                 S2CSyncConfigPacket syncPacket = new S2CSyncConfigPacket(syncJson);
-                for (ServerPlayer p : player.getServer().getPlayerList().getPlayers()) {
+                for (ServerPlayer p : player.level().getServer().getPlayerList().getPlayers()) {
                     Services.PLATFORM.sendConfigSyncPacket(p, syncPacket);
                 }
 

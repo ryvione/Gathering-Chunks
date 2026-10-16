@@ -16,7 +16,7 @@ public final class DevMode {
     private static volatile boolean enabled = false;
 
     public static boolean isEnabled() {
-        return enabled;
+        return enabled || com.ryvione.gatheringchunks.config.ChunkByChunkConfig.global().getDebug().isVerboseLogging();
     }
 
     public static boolean toggle() {

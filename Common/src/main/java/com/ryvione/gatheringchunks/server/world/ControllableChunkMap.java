@@ -9,7 +9,10 @@
  */
 
 package com.ryvione.gatheringchunks.server.world;
+import net.minecraft.server.level.ChunkHolder;
 import net.minecraft.world.level.ChunkPos;
 public interface ControllableChunkMap {
     void forceReloadChunk(ChunkPos chunk);
+
+    Iterable<ChunkHolder> getVisibleChunkHolders();
 }

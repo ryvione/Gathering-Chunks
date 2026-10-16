@@ -13,34 +13,69 @@ import com.ryvione.gatheringchunks.config.system.Name;
 
 public class ChunkByChunkConfig {
     private static final ChunkByChunkConfig instance = new ChunkByChunkConfig();
+    private static volatile ChunkByChunkConfig activeWorld = null;
 
     public static ChunkByChunkConfig get() {
+        ChunkByChunkConfig active = activeWorld;
+        return active != null ? active : instance;
+    }
+
+    public static ChunkByChunkConfig global() {
         return instance;
     }
 
+    public static void setActiveWorld(ChunkByChunkConfig worldView) {
+        activeWorld = worldView;
+    }
+
+    public static void clearActiveWorld() {
+        activeWorld = null;
+    }
+
     @Name("ChunkGeneration")
-    private final GenerationConfig generation = new GenerationConfig();
+    private GenerationConfig generation = new GenerationConfig();
 
     @Name("Difficulty")
-    private final DifficultyConfig difficulty = new DifficultyConfig();
+    private DifficultyConfig difficulty = new DifficultyConfig();
 
     @Name("Gameplay")
-    private final GameplayConfig gameplayConfig = new GameplayConfig();
+    private GameplayConfig gameplayConfig = new GameplayConfig();
 
     @Name("GatheringChunks")
-    private final GatheringChunksConfig gatheringChunksConfig = new GatheringChunksConfig();
-
-    @Name("WorldForge")
-    private final WorldForgeConfig worldForge = new WorldForgeConfig();
+    private GatheringChunksConfig gatheringChunksConfig = new GatheringChunksConfig();
 
     @Name("WorldScanner")
-    private final WorldScannerConfig worldScannerConfig = new WorldScannerConfig();
+    private WorldScannerConfig worldScannerConfig = new WorldScannerConfig();
+
+    @Name("WorldForge")
+    private WorldForgeConfig worldForge = new WorldForgeConfig();
 
     @Name("WorldMender")
-    private final WorldMenderConfig worldMenderConfig = new WorldMenderConfig();
+    private WorldMenderConfig worldMenderConfig = new WorldMenderConfig();
 
     @Name("BedrockChest")
-    private final BedrockChestConfig bedrockChest = new BedrockChestConfig();
+    private BedrockChestConfig bedrockChest = new BedrockChestConfig();
+
+    @Name("Debug")
+    private DebugConfig debug = new DebugConfig();
+
+    @Name("Performance")
+    private PerformanceConfig performance = new PerformanceConfig();
+
+    public ChunkByChunkConfig worldView(ChunkByChunkConfig worldSettings) {
+        ChunkByChunkConfig view = new ChunkByChunkConfig();
+        view.generation = worldSettings.generation;
+        view.difficulty = worldSettings.difficulty;
+        view.gameplayConfig = worldSettings.gameplayConfig;
+        view.gatheringChunksConfig = worldSettings.gatheringChunksConfig;
+        view.worldForge = this.worldForge;
+        view.worldScannerConfig = this.worldScannerConfig;
+        view.worldMenderConfig = this.worldMenderConfig;
+        view.bedrockChest = this.bedrockChest;
+        view.debug = this.debug;
+        view.performance = this.performance;
+        return view;
+    }
 
     public GenerationConfig getGeneration() {
         return generation;
@@ -60,6 +95,14 @@ public class ChunkByChunkConfig {
 
     public GatheringChunksConfig getGatheringChunksConfig() {
         return gatheringChunksConfig;
+    }
+
+    public DebugConfig getDebug() {
+        return debug;
+    }
+
+    public PerformanceConfig getPerformance() {
+        return performance;
     }
 
     public WorldScannerConfig getWorldScannerConfig() {

@@ -6,15 +6,9 @@
     "WSW"
   ],
   "key": {
-    "W": {
-      "item": "gatheringchunks:worldshard"
-    },
-    "S": {
-      "tag": "minecraft:stone_crafting_materials"
-    },
-    "C": {
-      "item": "gatheringchunks:worldcrystal"
-    }
+    "W": "gatheringchunks:worldshard",
+    "S": "#minecraft:stone_crafting_materials",
+    "C": "gatheringchunks:worldcrystal"
   },
   "result": {
     "id": "gatheringchunks:chunkeraser",

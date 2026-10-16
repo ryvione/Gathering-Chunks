@@ -20,7 +20,7 @@ import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 public class WorldMenderRecipeCategory implements IRecipeCategory<WorldMenderRecipe> {
     private final IDrawable icon;
@@ -33,7 +33,7 @@ public class WorldMenderRecipeCategory implements IRecipeCategory<WorldMenderRec
     public RecipeType<WorldMenderRecipe> getRecipeType() {
         return CBCJeiPlugin.WORLD_MENDER;
     }
-    public ResourceLocation getUid() {
+    public Identifier getUid() {
         return getRecipeType().getUid();
     }
     public Class<? extends WorldMenderRecipe> getRecipeClass() {
@@ -58,6 +58,6 @@ public class WorldMenderRecipeCategory implements IRecipeCategory<WorldMenderRec
     @Override
     public void setRecipe(IRecipeLayoutBuilder builder, WorldMenderRecipe recipe, IFocusGroup focuses) {
         builder.addSlot(RecipeIngredientRole.INPUT, 16, 16).addItemStack(recipe.getInput());
-        builder.addInvisibleIngredients(RecipeIngredientRole.CATALYST).addItemStack(Services.PLATFORM.worldMenderBlockItem().getDefaultInstance());
+        builder.addInvisibleIngredients(RecipeIngredientRole.CRAFTING_STATION).addItemStack(Services.PLATFORM.worldMenderBlockItem().getDefaultInstance());
     }
 }

@@ -30,7 +30,7 @@ public class FluidFlowPrevention {
     }
 
     public static boolean shouldCancelFluidFlow(ServerLevel level, BlockPos pos) {
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             return false;
         }
 

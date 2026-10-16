@@ -9,6 +9,7 @@
  */
 package com.ryvione.gatheringchunks.server.world.spawning;
 
+import com.ryvione.gatheringchunks.util.SavedDataCompat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -33,31 +34,28 @@ public class ChunkResourceTracker extends SavedData {
         if (overworld == null) {
             return new ChunkResourceTracker();
         }
-        return overworld.getChunkSource().getDataStorage().computeIfAbsent(
-                new SavedData.Factory<>(
-                        ChunkResourceTracker::new,
-                        (tag, provider) -> ChunkResourceTracker.load(tag),
-                        DataFixTypes.LEVEL
-                ),
-                "gatheringchunks_resource_tracker"
-        );
+        return overworld.getChunkSource().getDataStorage().computeIfAbsent(SavedDataCompat.of(
+                "gatheringchunks_resource_tracker",
+                ChunkResourceTracker::new,
+                ChunkResourceTracker::load,
+                tracker -> tracker.save(new CompoundTag())
+        ));
     }
 
     private static ChunkResourceTracker load(CompoundTag tag) {
         ChunkResourceTracker tracker = new ChunkResourceTracker();
-        ListTag knownChunks = tag.getList("KnownSourceChunks", StringTag.TAG_STRING);
+        ListTag knownChunks = tag.getListOrEmpty("KnownSourceChunks");
         for (int i = 0; i < knownChunks.size(); i++) {
-            tracker.knownSourceChunks.add(knownChunks.getString(i));
+            tracker.knownSourceChunks.add(knownChunks.getStringOr(i, ""));
         }
-        ListTag harvested = tag.getList("HarvestedPositions", StringTag.TAG_STRING);
+        ListTag harvested = tag.getListOrEmpty("HarvestedPositions");
         for (int i = 0; i < harvested.size(); i++) {
-            tracker.harvestedPositions.add(harvested.getString(i));
+            tracker.harvestedPositions.add(harvested.getStringOr(i, ""));
         }
         return tracker;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
+    public CompoundTag save(CompoundTag tag) {
         ListTag knownChunks = new ListTag();
         for (String key : knownSourceChunks) {
             knownChunks.add(StringTag.valueOf(key));
@@ -72,11 +70,11 @@ public class ChunkResourceTracker extends SavedData {
     }
 
     private static String chunkKey(ServerLevel sourceLevel, ChunkPos sourceChunkPos) {
-        return sourceLevel.dimension().location() + "@" + sourceChunkPos.toLong();
+        return sourceLevel.dimension().identifier() + "@" + sourceChunkPos.toLong();
     }
 
     private static String posKey(ServerLevel sourceLevel, BlockPos pos) {
-        return sourceLevel.dimension().location() + "@" + pos.asLong();
+        return sourceLevel.dimension().identifier() + "@" + pos.asLong();
     }
 
     public boolean isChunkKnown(ServerLevel sourceLevel, ChunkPos sourceChunkPos) {

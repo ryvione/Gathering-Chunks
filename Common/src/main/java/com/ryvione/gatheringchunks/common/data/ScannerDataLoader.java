@@ -15,32 +15,52 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.ryvione.gatheringchunks.common.GatheringChunksConstants;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
+import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
 
+import java.io.Reader;
+import java.util.HashMap;
 import java.util.Map;
 
-public class ScannerDataLoader extends SimpleJsonResourceReloadListener {
+public class ScannerDataLoader extends SimplePreparableReloadListener<Map<Identifier, JsonElement>> {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     private static final String DIRECTORY = "scanner_data";
 
     private final RegistryAccess registryAccess;
 
     public ScannerDataLoader(RegistryAccess registryAccess) {
-        super(GSON, DIRECTORY);
         this.registryAccess = registryAccess;
     }
 
     @Override
-    protected void apply(Map<ResourceLocation, JsonElement> map, ResourceManager resourceManager, ProfilerFiller profiler) {
+    protected Map<Identifier, JsonElement> prepare(ResourceManager resourceManager, ProfilerFiller profiler) {
+        Map<Identifier, JsonElement> result = new HashMap<>();
+        String prefix = DIRECTORY + "/";
+        for (Map.Entry<Identifier, Resource> entry
+                : resourceManager.listResources(DIRECTORY, id -> id.getPath().endsWith(".json")).entrySet()) {
+            Identifier fileId = entry.getKey();
+            String path = fileId.getPath();
+            Identifier id = fileId.withPath(path.substring(prefix.length(), path.length() - ".json".length()));
+            try (Reader reader = entry.getValue().openAsReader()) {
+                result.put(id, GSON.fromJson(reader, JsonElement.class));
+            } catch (Exception e) {
+                GatheringChunksConstants.LOGGER.error("Failed to read scanner data {}", fileId, e);
+            }
+        }
+        return result;
+    }
+
+    @Override
+    protected void apply(Map<Identifier, JsonElement> map, ResourceManager resourceManager, ProfilerFiller profiler) {
         GatheringChunksConstants.LOGGER.info("Loading scanner data configs...");
         com.ryvione.gatheringchunks.common.blockEntities.WorldScannerBlockEntity.clearItemMappings();
         int loaded = 0;
 
-        for (Map.Entry<ResourceLocation, JsonElement> entry : map.entrySet()) {
-            ResourceLocation id = entry.getKey();
+        for (Map.Entry<Identifier, JsonElement> entry : map.entrySet()) {
+            Identifier id = entry.getKey();
             JsonElement json = entry.getValue();
 
             try {

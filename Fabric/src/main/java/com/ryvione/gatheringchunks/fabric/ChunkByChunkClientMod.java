@@ -11,6 +11,7 @@ package com.ryvione.gatheringchunks.fabric;
 
 import com.ryvione.gatheringchunks.client.ClientConfigStorage;
 import com.ryvione.gatheringchunks.client.DevSnapshotWarning;
+import com.ryvione.gatheringchunks.client.render.ExperimentalScannerRenderer;
 import com.ryvione.gatheringchunks.client.screens.*;
 import com.ryvione.gatheringchunks.common.CommonRegistry;
 import com.ryvione.gatheringchunks.common.GatheringChunksConstants;
@@ -20,6 +21,7 @@ import com.ryvione.gatheringchunks.common.update.UpdateChecker;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
@@ -34,6 +36,7 @@ public class ChunkByChunkClientMod implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        WorldRenderEvents.BEFORE_DEBUG_RENDER.register(context -> ExperimentalScannerRenderer.renderHighlights());
         LOGGER.info("Client Initializing");
 
         ClientConfigStorage.init(FabricLoader.getInstance().getGameDir());
@@ -64,10 +67,12 @@ public class ChunkByChunkClientMod implements ClientModInitializer {
             LOGGER.info("[ClientMod] Joined server, set config scope: {}", serverId);
         });
 
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientConfigStorage.endServerSession());
+
         ClientPlayNetworking.registerGlobalReceiver(S2COpenConfigPacket.TYPE,
                 (payload, context) -> context.client().execute(() -> {
                     LOGGER.info("[ClientMod] Opening config screen from server packet");
-                    Minecraft.getInstance().setScreen(new GatheringChunksConfigScreen(null));
+                    Minecraft.getInstance().setScreen(GatheringChunksConfigScreen.forLoadedWorld(null));
                 }));
 
         ClientPlayNetworking.registerGlobalReceiver(S2CSyncConfigPacket.TYPE,

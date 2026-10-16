@@ -1,3 +1,13 @@
+/*
+ * Original work Copyright (c) immortius
+ * Modified work Copyright (c) 2026 Ryvione
+ *
+ * This file is part of Gathering Chunks (Ryvione's Fork).
+ * Original: https://github.com/immortius/chunkbychunk
+ *
+ * Licensed under the MIT License. See LICENSE file in the project root for details.
+ */
+
 package com.ryvione.gatheringchunks.interop;
 
 import com.ryvione.gatheringchunks.common.blockEntities.BedrockChestBlockEntity;
@@ -69,6 +79,7 @@ public interface CBCPlatformHelper {
     MenuType<CaveScannerMenu> caveScannerMenu();
     Fluid getFluidContent(BucketItem bucketItem);
     <T> void unfreezeRegistry(MappedRegistry<T> registry);
+    <T> void refreezeRegistry(MappedRegistry<T> registry);
     void openConfigScreen(ServerPlayer player);
     void sendConfigOpenPacket(ServerPlayer player, S2COpenConfigPacket packet);
     void sendConfigSyncPacket(ServerPlayer player, S2CSyncConfigPacket packet);

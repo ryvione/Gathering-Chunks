@@ -14,12 +14,12 @@ import com.mojang.serialization.Lifecycle;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.ryvione.gatheringchunks.server.world.SkyChunkGenerator;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.WorldGenRegion;
-import net.minecraft.util.random.WeightedRandomList;
+import net.minecraft.util.random.WeightedList;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.level.*;
 import net.minecraft.world.level.biome.Biome;
@@ -114,7 +114,7 @@ public class SkyChunkGenerator extends ChunkGenerator {
 
     public void addSynchLevel(ResourceKey<Level> dimension) {
         com.ryvione.gatheringchunks.common.GatheringChunksConstants.LOGGER
-                .info("[SkyGenerator] Adding sync level {} to generator {}", dimension.location(), this);
+                .info("[SkyGenerator] Adding sync level {} to generator {}", dimension.identifier(), this);
         synchedLevels.add(dimension);
     }
 
@@ -187,8 +187,7 @@ public class SkyChunkGenerator extends ChunkGenerator {
 
     @Override
     public void applyCarvers(WorldGenRegion region, long seed, RandomState randomState, BiomeManager biomeManager,
-            StructureManager structureManager, ChunkAccess chunk,
-            net.minecraft.world.level.levelgen.GenerationStep.Carving carving) {
+            StructureManager structureManager, ChunkAccess chunk) {
     }
 
     @Override
@@ -201,23 +200,23 @@ public class SkyChunkGenerator extends ChunkGenerator {
                         BlockPos.MutableBlockPos blockPos = new BlockPos.MutableBlockPos(0, 0, 0);
                         for (blockPos.setZ(0); blockPos.getZ() < 16; blockPos.setZ(blockPos.getZ() + 1)) {
                             for (blockPos.setX(0); blockPos.getX() < 16; blockPos.setX(blockPos.getX() + 1)) {
-                                blockPos.setY(chunkAccess.getMaxBuildHeight() - 1);
-                                while (blockPos.getY() > chunkAccess.getMinBuildHeight()
+                                blockPos.setY(chunkAccess.getMaxY());
+                                while (blockPos.getY() > chunkAccess.getMinY()
                                         && chunkAccess.getBlockState(blockPos).getBlock() instanceof AirBlock) {
                                     blockPos.setY(blockPos.getY() - 1);
                                 }
                                 if (sealCoverBlock != null) {
                                     blockPos.setY(blockPos.getY() + 1);
-                                    chunkAccess.setBlockState(blockPos, sealCoverBlock.defaultBlockState(), false);
+                                    chunkAccess.setBlockState(blockPos, sealCoverBlock.defaultBlockState(), 0);
                                     blockPos.setY(blockPos.getY() - 1);
                                 }
-                                while (blockPos.getY() > chunkAccess.getMinBuildHeight() + 1) {
-                                    chunkAccess.setBlockState(blockPos, sealBlock.defaultBlockState(), false);
+                                while (blockPos.getY() > chunkAccess.getMinY() + 1) {
+                                    chunkAccess.setBlockState(blockPos, sealBlock.defaultBlockState(), 0);
                                     blockPos.setY(blockPos.getY() - 1);
                                 }
-                                chunkAccess.setBlockState(blockPos, Blocks.BEDROCK.defaultBlockState(), false);
+                                chunkAccess.setBlockState(blockPos, Blocks.BEDROCK.defaultBlockState(), 0);
                                 blockPos.setY(blockPos.getY() - 1);
-                                chunkAccess.setBlockState(blockPos, Blocks.VOID_AIR.defaultBlockState(), false);
+                                chunkAccess.setBlockState(blockPos, Blocks.VOID_AIR.defaultBlockState(), 0);
                             }
                         }
                         return chunkAccess;
@@ -225,11 +224,11 @@ public class SkyChunkGenerator extends ChunkGenerator {
             case Nether -> CompletableFuture.completedFuture(chunk).thenApply(chunkAccess -> {
                 BlockPos.MutableBlockPos blockPos = new BlockPos.MutableBlockPos(0, 0, 0);
 
-                for (int y = chunkAccess.getMinBuildHeight(); y < chunkAccess.getMaxBuildHeight(); y++) {
+                for (int y = chunkAccess.getMinY(); y < chunkAccess.getMaxY() + 1; y++) {
                     for (int z = 0; z < 16; z++) {
                         for (int x = 0; x < 16; x++) {
                             blockPos.set(x, y, z);
-                            chunkAccess.setBlockState(blockPos, Blocks.AIR.defaultBlockState(), false);
+                            chunkAccess.setBlockState(blockPos, Blocks.AIR.defaultBlockState(), 0);
                         }
                     }
                 }
@@ -281,12 +280,12 @@ public class SkyChunkGenerator extends ChunkGenerator {
     }
 
     @Override
-    public WeightedRandomList<MobSpawnSettings.SpawnerData> getMobsAt(Holder<Biome> biome,
+    public WeightedList<MobSpawnSettings.SpawnerData> getMobsAt(Holder<Biome> biome,
             StructureManager structureManager, MobCategory mobCategory, BlockPos pos) {
         if (associatedLevel != null) {
             ChunkPos chunkPos = new ChunkPos(pos);
             if (SpawnChunkHelper.isEmptyChunk(associatedLevel, chunkPos)) {
-                return WeightedRandomList.create();
+                return WeightedList.of();
             }
         }
         return parent.getMobsAt(biome, structureManager, mobCategory, pos);
@@ -344,7 +343,7 @@ public class SkyChunkGenerator extends ChunkGenerator {
         if (generationLevel != null) {
             effectiveGenerationLevel = com.ryvione.gatheringchunks.server.world.ChunkSpawnController
                     .get(level.getServer())
-                    .getEffectiveGenerationLevel(level.dimension().location().toString(), generationLevel);
+                    .getEffectiveGenerationLevel(level.dimension().identifier().toString(), generationLevel);
             net.minecraft.server.level.ServerLevel genLevel = level.getServer().getLevel(effectiveGenerationLevel);
             if (genLevel != null) {
                 searchLevel = genLevel;
@@ -352,23 +351,23 @@ public class SkyChunkGenerator extends ChunkGenerator {
                 com.ryvione.gatheringchunks.common.GatheringChunksConstants.LOGGER.warn(
                         "[locate] Generation level {} not loaded/found - searching {} directly instead, which is "
                         + "usually empty for ungathered chunks and may return nothing or hang",
-                        effectiveGenerationLevel.location(), level.dimension().location());
+                        effectiveGenerationLevel.identifier(), level.dimension().identifier());
             }
         }
         boolean devMode = com.ryvione.gatheringchunks.server.DevMode.isEnabled();
         if (devMode) {
             com.ryvione.gatheringchunks.common.GatheringChunksConstants.LOGGER.info(
                     "[DevMode][locate] Searching {} (redirected from {}) from {} radius {} for {}",
-                    searchLevel.dimension().location(), level.dimension().location(), pos, searchRadius, structureTags);
+                    searchLevel.dimension().identifier(), level.dimension().identifier(), pos, searchRadius, structureTags);
         }
         long startNanos = System.nanoTime();
         com.mojang.datafixers.util.Pair<BlockPos, Holder<Structure>> result =
                 parent.findNearestMapStructure(searchLevel, structureTags, pos, searchRadius, skipReferencedStructures);
         long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000;
-        if (elapsedMs > 2000) {
+        if (elapsedMs > 2000 && com.ryvione.gatheringchunks.config.ChunkByChunkConfig.get().getDebug().isPerformanceTimings()) {
             com.ryvione.gatheringchunks.common.GatheringChunksConstants.LOGGER.info(
                     "[Perf][locate] Search of {} from {} radius {} for {} took {}ms",
-                    searchLevel.dimension().location(), pos, searchRadius, structureTags, elapsedMs);
+                    searchLevel.dimension().identifier(), pos, searchRadius, structureTags, elapsedMs);
         }
         if (devMode) {
             if (result == null) {
@@ -378,7 +377,7 @@ public class SkyChunkGenerator extends ChunkGenerator {
                 com.ryvione.gatheringchunks.common.GatheringChunksConstants.LOGGER.info(
                         "[DevMode][locate] Found {} at {} in {} (this position is only accurate in the visible "
                         + "dimension for direct-source spawning - random/themed sourcing will not line up)",
-                        result.getSecond(), result.getFirst(), searchLevel.dimension().location());
+                        result.getSecond(), result.getFirst(), searchLevel.dimension().identifier());
             }
         }
         return result;

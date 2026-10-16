@@ -21,6 +21,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.chunk.LevelChunk;
 
 import com.ryvione.gatheringchunks.config.ChunkByChunkConfig;
 import java.util.HashMap;
@@ -88,63 +89,49 @@ public class PlayerProgressionHelper {
         Set<BlockPos> trackedChests = tracker.getChestPositions();
 
         BlockPos playerPos = player.blockPosition();
+        net.minecraft.server.level.ServerLevel level = (net.minecraft.server.level.ServerLevel) player.level();
+        Item[] watched = {chunkSpawnerItem, worldCoreItem, worldCrystalItem, worldShardItem, worldFragmentItem};
+        int[] counts = {chunkSpawners, worldCores, worldCrystals, worldShards, worldFragments};
 
-        for (int x = -SEARCH_RADIUS; x <= SEARCH_RADIUS; x++) {
-            for (int y = -SEARCH_RADIUS; y <= SEARCH_RADIUS; y++) {
-                for (int z = -SEARCH_RADIUS; z <= SEARCH_RADIUS; z++) {
-                    BlockPos checkPos = playerPos.offset(x, y, z);
-
-                    BlockEntity be = player.serverLevel().getBlockEntity(checkPos);
-
-                    if (be instanceof Container container) {
-                        for (int i = 0; i < container.getContainerSize(); i++) {
-                            ItemStack stack = container.getItem(i);
-                            if (stack.isEmpty())
-                                continue;
-
-                            if (stack.is(chunkSpawnerItem)) {
-                                chunkSpawners += stack.getCount();
-                            } else if (stack.is(worldCoreItem)) {
-                                worldCores += stack.getCount();
-                            } else if (stack.is(worldCrystalItem)) {
-                                worldCrystals += stack.getCount();
-                            } else if (stack.is(worldShardItem)) {
-                                worldShards += stack.getCount();
-                            } else if (stack.is(worldFragmentItem)) {
-                                worldFragments += stack.getCount();
-                            }
-                        }
+        int minChunkX = (playerPos.getX() - SEARCH_RADIUS) >> 4;
+        int maxChunkX = (playerPos.getX() + SEARCH_RADIUS) >> 4;
+        int minChunkZ = (playerPos.getZ() - SEARCH_RADIUS) >> 4;
+        int maxChunkZ = (playerPos.getZ() + SEARCH_RADIUS) >> 4;
+        for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
+                LevelChunk chunk = level.getChunkSource().getChunkNow(chunkX, chunkZ);
+                if (chunk == null) {
+                    continue;
+                }
+                for (BlockEntity be : chunk.getBlockEntities().values()) {
+                    if (be instanceof Container container && isInSearchBox(be.getBlockPos(), playerPos)) {
+                        countItems(container, watched, counts);
                     }
                 }
             }
         }
 
+        boolean unreadableChest = false;
         for (BlockPos trackedPos : trackedChests) {
-            if (trackedPos.closerThan(playerPos, SEARCH_RADIUS)) {
+            if (isInSearchBox(trackedPos, playerPos)) {
                 continue;
             }
 
-            BlockEntity be = player.serverLevel().getBlockEntity(trackedPos);
-            if (be instanceof Container container) {
-                for (int i = 0; i < container.getContainerSize(); i++) {
-                    ItemStack stack = container.getItem(i);
-                    if (stack.isEmpty())
-                        continue;
-
-                    if (stack.is(chunkSpawnerItem)) {
-                        chunkSpawners += stack.getCount();
-                    } else if (stack.is(worldCoreItem)) {
-                        worldCores += stack.getCount();
-                    } else if (stack.is(worldCrystalItem)) {
-                        worldCrystals += stack.getCount();
-                    } else if (stack.is(worldShardItem)) {
-                        worldShards += stack.getCount();
-                    } else if (stack.is(worldFragmentItem)) {
-                        worldFragments += stack.getCount();
-                    }
-                }
+            LevelChunk chunk = level.getChunkSource().getChunkNow(trackedPos.getX() >> 4, trackedPos.getZ() >> 4);
+            if (chunk == null) {
+                unreadableChest = true;
+                continue;
+            }
+            if (chunk.getBlockEntity(trackedPos) instanceof Container container) {
+                countItems(container, watched, counts);
             }
         }
+
+        chunkSpawners = counts[0];
+        worldCores = counts[1];
+        worldCrystals = counts[2];
+        worldShards = counts[3];
+        worldFragments = counts[4];
 
         if (chunkSpawners > 0) {
             hasBeenWarned.put(player.getUUID(), false);
@@ -157,6 +144,12 @@ public class PlayerProgressionHelper {
                 "Player {} progression check: Spawners={}, Cores={}, Crystals={}, Shards={}, Fragments={}, Total Equivalents={}",
                 player.getName().getString(), chunkSpawners, worldCores, worldCrystals, worldShards, worldFragments,
                 totalFragmentEquivalents);
+
+        if (totalFragmentEquivalents < 64 && unreadableChest) {
+            GatheringChunksConstants.LOGGER.debug("Player {} has chests in unloaded chunks - not giving a spawner this round",
+                    player.getName().getString());
+            return;
+        }
 
         if (totalFragmentEquivalents < 64) {
             Boolean warned = hasBeenWarned.get(player.getUUID());
@@ -184,6 +177,27 @@ public class PlayerProgressionHelper {
             hasBeenWarned.put(player.getUUID(), true);
         } else {
             hasBeenWarned.put(player.getUUID(), false);
+        }
+    }
+
+    private static boolean isInSearchBox(BlockPos pos, BlockPos center) {
+        return Math.abs(pos.getX() - center.getX()) <= SEARCH_RADIUS
+                && Math.abs(pos.getY() - center.getY()) <= SEARCH_RADIUS
+                && Math.abs(pos.getZ() - center.getZ()) <= SEARCH_RADIUS;
+    }
+
+    private static void countItems(Container container, Item[] watched, int[] counts) {
+        for (int slot = 0; slot < container.getContainerSize(); slot++) {
+            ItemStack stack = container.getItem(slot);
+            if (stack.isEmpty()) {
+                continue;
+            }
+            for (int i = 0; i < watched.length; i++) {
+                if (stack.is(watched[i])) {
+                    counts[i] += stack.getCount();
+                    break;
+                }
+            }
         }
     }
 }

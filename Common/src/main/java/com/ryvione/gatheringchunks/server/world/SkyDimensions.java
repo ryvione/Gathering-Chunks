@@ -13,7 +13,7 @@ package com.ryvione.gatheringchunks.server.world;
 import com.google.gson.Gson;
 import com.ryvione.gatheringchunks.common.GatheringChunksConstants;
 import com.ryvione.gatheringchunks.common.data.SkyDimensionData;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 
@@ -25,13 +25,13 @@ import java.util.Map;
 public final class SkyDimensions {
     private SkyDimensions() {
     }
-    private static final Map<ResourceLocation, SkyDimensionData> skyDimensions = new LinkedHashMap<>();
+    private static final Map<Identifier, SkyDimensionData> skyDimensions = new LinkedHashMap<>();
     public static void loadSkyDimensionData(ResourceManager resourceManager, Gson gson) {
         int count = 0;
         skyDimensions.clear();
-        Map<ResourceLocation, Resource> resources = resourceManager.listResources(GatheringChunksConstants.SKY_DIMENSION_DATA_PATH, r -> r.getPath().length() > GatheringChunksConstants.SKY_DIMENSION_DATA_PATH.length());
-        for (Map.Entry<ResourceLocation, Resource> entry : resources.entrySet()) {
-            ResourceLocation location = entry.getKey();
+        Map<Identifier, Resource> resources = resourceManager.listResources(GatheringChunksConstants.SKY_DIMENSION_DATA_PATH, r -> r.getPath().length() > GatheringChunksConstants.SKY_DIMENSION_DATA_PATH.length());
+        for (Map.Entry<Identifier, Resource> entry : resources.entrySet()) {
+            Identifier location = entry.getKey();
             Resource resource = entry.getValue();
             try (InputStreamReader reader = new InputStreamReader(resource.open())) {
                 SkyDimensionData data = gson.fromJson(reader, SkyDimensionData.class);
@@ -48,7 +48,7 @@ public final class SkyDimensions {
         skyDimensions.clear();
     }
 
-    public static Map<ResourceLocation, SkyDimensionData> getSkyDimensions() {
+    public static Map<Identifier, SkyDimensionData> getSkyDimensions() {
         return Collections.unmodifiableMap(skyDimensions);
     }
 }

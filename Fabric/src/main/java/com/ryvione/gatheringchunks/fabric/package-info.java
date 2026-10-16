@@ -11,5 +11,5 @@
 @FieldsAreNonnullByDefault
 
 package com.ryvione.gatheringchunks.fabric;
-import net.minecraft.FieldsAreNonnullByDefault;
-import net.minecraft.MethodsReturnNonnullByDefault;
+import com.ryvione.gatheringchunks.util.FieldsAreNonnullByDefault;
+import com.ryvione.gatheringchunks.util.MethodsReturnNonnullByDefault;

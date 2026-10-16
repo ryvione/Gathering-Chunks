@@ -3,9 +3,7 @@
   "category": "building",
   "group": "gatheringchunks",
   "ingredients": [
-    {
-      "item": "gatheringchunks:chunkspawner"
-    }
+    "gatheringchunks:chunkspawner"
   ],
   "result": {
     "id": "gatheringchunks:worldcore",

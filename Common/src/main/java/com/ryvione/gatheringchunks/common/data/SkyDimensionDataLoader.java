@@ -17,15 +17,13 @@ import com.ryvione.gatheringchunks.common.GatheringChunksConstants;
 import com.ryvione.gatheringchunks.server.world.SkyChunkGenerator;
 import com.ryvione.gatheringchunks.server.world.SkyDimensions;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.server.packs.resources.PreparableReloadListener;
+import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.profiling.ProfilerFiller;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 
 
-public class SkyDimensionDataLoader implements PreparableReloadListener {
+public class SkyDimensionDataLoader extends SimplePreparableReloadListener<Void> {
     private static final Gson GSON = new GsonBuilder()
             .setPrettyPrinting()
             .disableHtmlEscaping()
@@ -40,17 +38,13 @@ public class SkyDimensionDataLoader implements PreparableReloadListener {
     }
 
     @Override
-    public CompletableFuture<Void> reload(
-            PreparationBarrier preparationBarrier,
-            ResourceManager resourceManager,
-            ProfilerFiller preparationsProfiler,
-            ProfilerFiller reloadProfiler,
-            Executor backgroundExecutor,
-            Executor gameExecutor) {
+    protected Void prepare(ResourceManager resourceManager, ProfilerFiller profiler) {
+        return null;
+    }
 
-        return preparationBarrier.wait(null).thenRunAsync(() -> {
-            GatheringChunksConstants.LOGGER.debug("SkyDimensionDataLoader: Delegating to SkyDimensions.loadSkyDimensionData()");
-            SkyDimensions.loadSkyDimensionData(resourceManager, GSON);
-        }, gameExecutor);
+    @Override
+    protected void apply(Void preparations, ResourceManager resourceManager, ProfilerFiller profiler) {
+        GatheringChunksConstants.LOGGER.debug("SkyDimensionDataLoader: Delegating to SkyDimensions.loadSkyDimensionData()");
+        SkyDimensions.loadSkyDimensionData(resourceManager, GSON);
     }
 }

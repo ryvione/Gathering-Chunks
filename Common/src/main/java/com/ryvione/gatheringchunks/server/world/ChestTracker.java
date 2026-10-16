@@ -9,6 +9,7 @@
  */
 package com.ryvione.gatheringchunks.server.world;
 
+import com.ryvione.gatheringchunks.util.SavedDataCompat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -20,6 +21,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.core.UUIDUtil;
 
 import java.util.*;
 
@@ -33,32 +35,30 @@ public class ChestTracker extends SavedData {
         if (overworld == null) {
             return new ChestTracker(server);
         }
-        return overworld.getChunkSource().getDataStorage().computeIfAbsent(
-                new SavedData.Factory<>(
-                        () -> new ChestTracker(server),
-                        (tag, provider) -> ChestTracker.load(server, tag, provider),
-                        DataFixTypes.LEVEL
-                ),
-                "chunkbychunk_chest_tracker"
-        );
+        return overworld.getChunkSource().getDataStorage().computeIfAbsent(SavedDataCompat.of(
+                "chunkbychunk_chest_tracker",
+                () -> new ChestTracker(server),
+                tag -> ChestTracker.load(server, tag),
+                tracker -> tracker.save(new CompoundTag())
+        ));
     }
 
-    private static ChestTracker load(MinecraftServer server, CompoundTag tag, HolderLookup.Provider provider) {
+    private static ChestTracker load(MinecraftServer server, CompoundTag tag) {
         ChestTracker tracker = new ChestTracker(server);
-        ListTag positionsTag = tag.getList("chests", CompoundTag.TAG_COMPOUND);
+        ListTag positionsTag = tag.getListOrEmpty("chests");
         for (int i = 0; i < positionsTag.size(); i++) {
-            CompoundTag posTag = positionsTag.getCompound(i);
-            int x = posTag.getInt("x");
-            int y = posTag.getInt("y");
-            int z = posTag.getInt("z");
+            CompoundTag posTag = positionsTag.getCompoundOrEmpty(i);
+            int x = posTag.getIntOr("x", 0);
+            int y = posTag.getIntOr("y", 0);
+            int z = posTag.getIntOr("z", 0);
             tracker.chestPositions.add(new BlockPos(x, y, z).immutable());
         }
 
-        ListTag playerSettingsTag = tag.getList("playerSettings", CompoundTag.TAG_COMPOUND);
+        ListTag playerSettingsTag = tag.getListOrEmpty("playerSettings");
         for (int i = 0; i < playerSettingsTag.size(); i++) {
-            CompoundTag playerTag = playerSettingsTag.getCompound(i);
-            UUID playerUUID = playerTag.getUUID("uuid");
-            boolean enabled = playerTag.getBoolean("enabled");
+            CompoundTag playerTag = playerSettingsTag.getCompoundOrEmpty(i);
+            UUID playerUUID = UUIDUtil.uuidFromIntArray(playerTag.getIntArray("uuid").orElse(new int[4]));
+            boolean enabled = playerTag.getBooleanOr("enabled", false);
             tracker.playerTrackerEnabled.put(playerUUID, enabled);
         }
         return tracker;
@@ -68,8 +68,7 @@ public class ChestTracker extends SavedData {
         this.server = server;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
+    public CompoundTag save(CompoundTag tag) {
         ListTag positionsTag = new ListTag();
         for (BlockPos pos : chestPositions) {
             CompoundTag posTag = new CompoundTag();
@@ -84,7 +83,7 @@ public class ChestTracker extends SavedData {
         ListTag playerSettingsTag = new ListTag();
         for (Map.Entry<UUID, Boolean> entry : playerTrackerEnabled.entrySet()) {
             CompoundTag playerTag = new CompoundTag();
-            playerTag.putUUID("uuid", entry.getKey());
+            playerTag.putIntArray("uuid", UUIDUtil.uuidToIntArray(entry.getKey()));
             playerTag.putBoolean("enabled", entry.getValue());
             playerSettingsTag.add(playerTag);
         }
@@ -121,7 +120,12 @@ public class ChestTracker extends SavedData {
             return;
         }
 
-        BlockEntity blockEntity = level.getBlockEntity(immutablePos);
+        net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunkSource()
+                .getChunkNow(immutablePos.getX() >> 4, immutablePos.getZ() >> 4);
+        if (chunk == null) {
+            return;
+        }
+        BlockEntity blockEntity = chunk.getBlockEntity(immutablePos);
         if (blockEntity instanceof RandomizableContainerBlockEntity chest) {
             boolean isEmpty = true;
             for (int i = 0; i < chest.getContainerSize(); i++) {

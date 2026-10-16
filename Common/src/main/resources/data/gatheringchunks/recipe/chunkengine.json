@@ -1,24 +1,18 @@
 {
-    "type": "minecraft:crafting_shaped",
-    "category": "misc",
-    "key": {
-        "C": {
-            "item": "gatheringchunks:worldcore"
-        },
-        "F": {
-            "item": "minecraft:furnace"
-        },
-        "S": {
-            "item": "minecraft:iron_ingot"
-        }
-    },
-    "pattern": [
-        "SSS",
-        "FCF",
-        "SSS"
-    ],
-    "result": {
-        "count": 1,
-        "id": "gatheringchunks:chunkengine"
-    }
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "C": "gatheringchunks:worldcore",
+    "F": "minecraft:furnace",
+    "S": "minecraft:iron_ingot"
+  },
+  "pattern": [
+    "SSS",
+    "FCF",
+    "SSS"
+  ],
+  "result": {
+    "count": 1,
+    "id": "gatheringchunks:chunkengine"
+  }
 }

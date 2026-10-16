@@ -1,3 +1,13 @@
+/*
+ * Original work Copyright (c) immortius
+ * Modified work Copyright (c) 2026 Ryvione
+ *
+ * This file is part of Gathering Chunks (Ryvione's Fork).
+ * Original: https://github.com/immortius/chunkbychunk
+ *
+ * Licensed under the MIT License. See LICENSE file in the project root for details.
+ */
+
 package com.ryvione.gatheringchunks.server.world.spawning;
 
 import com.ryvione.gatheringchunks.common.GatheringChunksConstants;
@@ -13,6 +23,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
@@ -24,6 +35,7 @@ import net.minecraft.world.level.chunk.*;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
+import net.minecraft.world.level.storage.TagValueInput;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -57,6 +69,10 @@ public final class ChunkCopyHelper {
         BlockPos.MutableBlockPos sourceBlock = new BlockPos.MutableBlockPos();
         BlockPos.MutableBlockPos targetBlock = new BlockPos.MutableBlockPos();
 
+        boolean leafDecayDisabled = ChunkByChunkConfig.get().getGameplayConfig().isChunkSpawnLeafDecayDisabled();
+        boolean targetIsNether = targetLevel.dimension() == Level.NETHER;
+        boolean replaceHarvestedOres = overwrite && chunkPreviouslyGathered;
+
         for (int y = fromLayer; y < toLayer; y++) {
             for (int z = sourceChunkPos.getMinBlockZ(); z <= sourceChunkPos.getMaxBlockZ(); z++) {
                 for (int x = sourceChunkPos.getMinBlockX(); x <= sourceChunkPos.getMaxBlockX(); x++) {
@@ -65,13 +81,13 @@ public final class ChunkCopyHelper {
 
                     BlockState existingState = targetLevel.getBlockState(targetBlock);
                     Block existingBlock = existingState.getBlock();
-                    boolean isLavaInNether = targetLevel.dimension() == Level.NETHER && existingBlock == Blocks.LAVA;
+                    boolean isLavaInNether = targetIsNether && existingBlock == Blocks.LAVA;
                     boolean isReplaceableEmptySpace = existingBlock instanceof AirBlock || existingBlock instanceof LiquidBlock
                             || existingBlock == sealedBlock || existingBlock == Blocks.SNOW || isLavaInNether;
 
                     if (overwrite || isReplaceableEmptySpace) {
                         BlockState newBlock = sourceLevel.getBlockState(sourceBlock);
-                        if (overwrite && chunkPreviouslyGathered && isOreBlock(newBlock.getBlock())) {
+                        if (replaceHarvestedOres && isOreBlock(newBlock.getBlock())) {
                             boolean harvested = tracker.isPositionHarvested(sourceLevel, sourceBlock);
                             if (!harvested && !existingState.is(newBlock.getBlock())) {
                                 tracker.markPositionHarvested(sourceLevel, sourceBlock);
@@ -81,25 +97,30 @@ public final class ChunkCopyHelper {
                                 newBlock = getFillerBlockFor(sourceLevel, y).defaultBlockState();
                             }
                         }
-                        if (ChunkByChunkConfig.get().getGameplayConfig().isChunkSpawnLeafDecayDisabled()
-                                && newBlock.getBlock() instanceof LeavesBlock) {
+                        if (leafDecayDisabled && newBlock.getBlock() instanceof LeavesBlock) {
                             newBlock = newBlock.setValue(LeavesBlock.PERSISTENT, true);
                         }
+                        boolean hasBlockEntity = newBlock.hasBlockEntity();
+                        if (newBlock == existingState && !hasBlockEntity) {
+                            continue;
+                        }
                         targetLevel.setBlock(targetBlock, newBlock, Block.UPDATE_CLIENTS | Block.UPDATE_SUPPRESS_DROPS);
-                        BlockEntity fromBlockEntity = sourceLevel.getBlockEntity(sourceBlock);
-                        BlockEntity toBlockEntity = targetLevel.getBlockEntity(targetBlock);
-                        if (fromBlockEntity != null && toBlockEntity != null) {
-                            toBlockEntity.loadWithComponents(
-                                    fromBlockEntity.saveWithFullMetadata(targetLevel.registryAccess()),
-                                    targetLevel.registryAccess());
-                            targetLevel.setBlockEntity(toBlockEntity);
+                        if (hasBlockEntity) {
+                            BlockEntity fromBlockEntity = sourceLevel.getBlockEntity(sourceBlock);
+                            BlockEntity toBlockEntity = targetLevel.getBlockEntity(targetBlock);
+                            if (fromBlockEntity != null && toBlockEntity != null) {
+                                toBlockEntity.loadWithComponents(TagValueInput.create(ProblemReporter.DISCARDING,
+                                        targetLevel.registryAccess(),
+                                        fromBlockEntity.saveWithFullMetadata(targetLevel.registryAccess())));
+                                targetLevel.setBlockEntity(toBlockEntity);
+                            }
                         }
                     }
                 }
             }
         }
         long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000;
-        if (elapsedMs > 200) {
+        if (elapsedMs > 200 && com.ryvione.gatheringchunks.config.ChunkByChunkConfig.get().getDebug().isPerformanceTimings()) {
             GatheringChunksConstants.LOGGER.info("[Perf][copyBlocks] {} -> {} layers {}-{} ({} blocks/layer) took {}ms",
                     sourceChunkPos, targetChunkPos, fromLayer, toLayer,
                     (sourceChunkPos.getMaxBlockX() - sourceChunkPos.getMinBlockX() + 1)
@@ -112,8 +133,14 @@ public final class ChunkCopyHelper {
         ChunkResourceTracker.get(sourceLevel.getServer()).markChunkKnown(sourceLevel, sourceChunkPos);
     }
 
+    private static final java.util.Map<Block, Boolean> ORE_BLOCKS = new java.util.concurrent.ConcurrentHashMap<>();
+
     private static boolean isOreBlock(Block block) {
-        net.minecraft.resources.ResourceLocation key = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block);
+        return ORE_BLOCKS.computeIfAbsent(block, ChunkCopyHelper::computeIsOreBlock);
+    }
+
+    private static boolean computeIsOreBlock(Block block) {
+        net.minecraft.resources.Identifier key = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block);
         if (key == null) {
             return false;
         }
@@ -150,7 +177,7 @@ public final class ChunkCopyHelper {
         Map<Structure, LongSet> references = sourceChunk.getAllReferences();
 
         debugLog("[StructureCopy] {} -> {} ({} -> {}): source chunk has {} structure start(s), {} reference set(s), fast-path={}",
-                sourceChunkPos, targetChunkPos, sourceLevel.dimension().location(), targetLevel.dimension().location(),
+                sourceChunkPos, targetChunkPos, sourceLevel.dimension().identifier(), targetLevel.dimension().identifier(),
                 starts.size(), references.size(), blockOffsetX == 0 && blockOffsetZ == 0);
 
         if (starts.isEmpty() && references.isEmpty()) {
@@ -168,7 +195,7 @@ public final class ChunkCopyHelper {
                     targetChunk.addReferenceForStructure(entry.getKey(), ref);
                 }
             }
-            targetChunk.setUnsaved(true);
+            targetChunk.markUnsaved();
             logStructureCopyTime(startNanos, sourceChunkPos, targetChunkPos);
             return;
         }
@@ -210,20 +237,20 @@ public final class ChunkCopyHelper {
                 targetChunk.addReferenceForStructure(entry.getKey(), translatedRef.toLong());
             }
         }
-        targetChunk.setUnsaved(true);
+        targetChunk.markUnsaved();
         logStructureCopyTime(startNanos, sourceChunkPos, targetChunkPos);
     }
 
     private static void logStructureCopyTime(long startNanos, ChunkPos sourceChunkPos, ChunkPos targetChunkPos) {
         long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000;
-        if (elapsedMs > 50) {
+        if (elapsedMs > 50 && com.ryvione.gatheringchunks.config.ChunkByChunkConfig.get().getDebug().isPerformanceTimings()) {
             GatheringChunksConstants.LOGGER.info("[Perf][copyStructureData] {} -> {} took {}ms", sourceChunkPos, targetChunkPos, elapsedMs);
         }
     }
 
     private static void shiftStructureTag(CompoundTag tag, int dx, int dz) {
-        if (tag.contains("BB", Tag.TAG_INT_ARRAY)) {
-            int[] bb = tag.getIntArray("BB");
+        if (tag.contains("BB")) {
+            int[] bb = tag.getIntArray("BB").orElse(new int[0]);
             if (bb.length == 6) {
                 bb[0] += dx;
                 bb[3] += dx;
@@ -232,10 +259,10 @@ public final class ChunkCopyHelper {
                 tag.putIntArray("BB", bb);
             }
         }
-        if (tag.contains("Children", Tag.TAG_LIST)) {
-            ListTag children = tag.getList("Children", Tag.TAG_COMPOUND);
+        if (tag.contains("Children")) {
+            ListTag children = tag.getListOrEmpty("Children");
             for (int i = 0; i < children.size(); i++) {
-                shiftStructureTag(children.getCompound(i), dx, dz);
+                shiftStructureTag(children.getCompoundOrEmpty(i), dx, dz);
             }
         }
     }
@@ -248,7 +275,7 @@ public final class ChunkCopyHelper {
                     + "dimensions' height ranges don't match, which will cause biome (and possibly block) "
                     + "misalignment for this chunk - check that the generation dimension's dimension_type has the "
                     + "same min_y/height/logical_height as the visible dimension it feeds.",
-                    sourceLevel.dimension().location(), targetLevel.dimension().location(), targetChunkPos,
+                    sourceLevel.dimension().identifier(), targetLevel.dimension().identifier(), targetChunkPos,
                     sourceChunk.getSections().length, targetChunk.getSections().length);
         }
         if (!(targetChunk instanceof LevelChunk levelChunk)) return;
@@ -290,7 +317,7 @@ public final class ChunkCopyHelper {
                 } catch (Exception e) {
                     GatheringChunksConstants.LOGGER.error("Failed to update biomes", e);
                 }
-                targetChunk.setUnsaved(true);
+                targetChunk.markUnsaved();
             }
         }
         if (biomesUpdated) {
@@ -315,7 +342,15 @@ public final class ChunkCopyHelper {
 
     private static String describeBiome(Holder<Biome> biome) {
         if (biome == null) return "?";
-        return biome.unwrapKey().map(key -> key.location().toString()).orElse(biome.toString());
+        return biome.unwrapKey().map(key -> key.identifier().toString()).orElse(biome.toString());
+    }
+
+    public static void scheduleClientRefresh(ServerLevel level, ChunkPos chunkPos) {
+        com.ryvione.gatheringchunks.server.DelayedTasks.runAfterTicks(level.getServer(), 20, () -> {
+            if (level.hasChunk(chunkPos.x, chunkPos.z)) {
+                ((ControllableChunkMap) level.getChunkSource().chunkMap).forceReloadChunk(chunkPos);
+            }
+        });
     }
 
     public static void triggerLightingUpdate(ServerLevel level, ChunkPos chunkPos) {
@@ -324,8 +359,8 @@ public final class ChunkCopyHelper {
             int minZ = chunkPos.getMinBlockZ();
             int maxX = chunkPos.getMaxBlockX();
             int maxZ = chunkPos.getMaxBlockZ();
-            int minY = level.getMinBuildHeight();
-            int maxY = level.getMaxBuildHeight();
+            int minY = level.getMinY();
+            int maxY = level.getMaxY() + 1;
 
             for (int y = minY; y < maxY; y++) {
                 for (int x = minX; x <= maxX; x++) {

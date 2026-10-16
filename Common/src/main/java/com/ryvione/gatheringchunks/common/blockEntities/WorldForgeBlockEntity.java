@@ -13,13 +13,15 @@ import com.google.common.collect.ImmutableMap;
 import com.ryvione.gatheringchunks.common.menus.WorldForgeMenu;
 import com.ryvione.gatheringchunks.config.ChunkByChunkConfig;
 import com.ryvione.gatheringchunks.interop.Services;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -49,9 +51,9 @@ public class WorldForgeBlockEntity extends BaseFueledBlockEntity {
     private static final int[] SLOTS_FOR_UP = new int[]{SLOT_INPUT};
     private static final int[] SLOTS_FOR_DOWN = new int[]{SLOT_RESULT};
     private static final int[] SLOTS_FOR_SIDE = new int[]{SLOT_INPUT};
-    private static final TagKey<Item> SOIL_FUEL_TAG = TagKey.create(Registries.ITEM, ResourceLocation.parse("gatheringchunks:weakworldforgefuel"));
-    private static final TagKey<Item> STONE_FUEL_TAG = TagKey.create(Registries.ITEM, ResourceLocation.parse("gatheringchunks:worldforgefuel"));
-    private static final TagKey<Item> STRONG_FUEL_TAG = TagKey.create(Registries.ITEM, ResourceLocation.parse("gatheringchunks:strongworldforgefuel"));
+    private static final TagKey<Item> SOIL_FUEL_TAG = TagKey.create(Registries.ITEM, Identifier.parse("gatheringchunks:weakworldforgefuel"));
+    private static final TagKey<Item> STONE_FUEL_TAG = TagKey.create(Registries.ITEM, Identifier.parse("gatheringchunks:worldforgefuel"));
+    private static final TagKey<Item> STRONG_FUEL_TAG = TagKey.create(Registries.ITEM, Identifier.parse("gatheringchunks:strongworldforgefuel"));
     private int progress;
     private int goal;
     private boolean processingOre = false;
@@ -157,19 +159,19 @@ public class WorldForgeBlockEntity extends BaseFueledBlockEntity {
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider provider) {
-        super.loadAdditional(tag, provider);
-        this.progress = tag.getInt("Progress");
-        this.goal = tag.getInt("Goal");
-        this.processingOre = tag.getBoolean("ProcessingOre");
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        this.progress = input.getIntOr("Progress", 0);
+        this.goal = input.getIntOr("Goal", 0);
+        this.processingOre = input.getBooleanOr("ProcessingOre", false);
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider provider) {
-        super.saveAdditional(tag, provider);
-        tag.putInt("Progress", this.progress);
-        tag.putInt("Goal", this.goal);
-        tag.putBoolean("ProcessingOre", this.processingOre);
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        output.putInt("Progress", this.progress);
+        output.putInt("Goal", this.goal);
+        output.putBoolean("ProcessingOre", this.processingOre);
     }
 
     public static void serverTick(Level level, BlockPos blockPos, BlockState blockState, WorldForgeBlockEntity entity) {
